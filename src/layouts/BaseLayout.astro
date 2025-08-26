@@ -1,24 +1,56 @@
 ---
-import "../styles/global.css"; // importa Tailwind (v4) desde tu global.css
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
-const { title = "Carrot", description = "Ropa second hand"} = Astro.props;
+import "../styles/global.css";
+
+const SITE = "Carrot";
+const DEFAULT_DESC = "Ropa second hand";
+
+const {
+  title,
+  description,
+  // opcional: pasá image desde cada página si querés OG/Twitter image
+  image
+} = Astro.props;
+
+const pageTitle = title ? `${title} | ${SITE}` : SITE;
+const pageDesc  = description ?? DEFAULT_DESC;
+const canonical = Astro.url?.href;
 ---
+
 <html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title}</title>
-    <meta name="description" content={description} />
+
+    <title>{pageTitle}</title>
+    <meta name="description" content={pageDesc} />
+    {canonical && <link rel="canonical" href={canonical} />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDesc} />
+    {canonical && <meta property="og:url" content={canonical} />}
+    {image && <meta property="og:image" content={image} />}
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={pageDesc} />
+    {image && <meta name="twitter:image" content={image} />}
+
+    <!-- Color del navegador (opcional) -->
+    <meta name="theme-color" content="#f97316" />
   </head>
+
   <body class="min-h-dvh bg-orange-50 text-stone-900">
     <header class="border-b border-orange-200">
       <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
         <a href="/" class="text-2xl font-black">🥕 Carrot</a>
         <nav class="flex gap-5 text-sm">
-            <a href="/catalogo" class="hover:underline">Catálogo</a>
-            <a href="/como-comprar" class="hover:underline">Cómo comprar</a>
-            <a href="/contacto" class="hover:underline">Contacto</a>
+          <a href="/catalogo" class="hover:underline">Catálogo</a>
+          <a href="/como-comprar" class="hover:underline">Cómo comprar</a>
+          <a href="/contacto" class="hover:underline">Contacto</a>
         </nav>
       </div>
     </header>

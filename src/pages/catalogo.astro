@@ -3,53 +3,57 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import products from "../data/products.json";
 
-const url = new URL(Astro.request.url);
-const cat = url.searchParams.get("categoria"); // Pantalón | Remera | Campera
-const talle = url.searchParams.get("talle");   // S | M | L
-const q = url.searchParams.get("q")?.toLowerCase().trim() || "";
+const params = Astro.url.searchParams;
+const cat = params.get("categoria") || "";
+const talle = params.get("talle") || "";
+const q = (params.get("q") || "").toLowerCase().trim();
 
-const listado = products
-  .filter(p => !cat || p.category === cat)
-  .filter(p => !talle || p.sizes.includes(talle))
-  .filter(p => !q || (
-    p.title.toLowerCase().includes(q) ||
-    p.category.toLowerCase().includes(q) ||
-    p.color?.toLowerCase().includes(q)
-  ));
-const categorias = ["Pantalón", "Remera", "Campera"];
-const talles = ["S", "M", "L"];
+// listas únicas a partir de los datos
+const categorias = Array.from(new Set(products.map((p) => p.categoria).filter(Boolean)));
+const talles = Array.from(new Set(products.map((p) => p.talle).filter(Boolean)));
+
+let listado = products;
+
+// filtros
+if (cat) listado = listado.filter((p) => p.categoria === cat);
+if (talle) listado = listado.filter((p) => p.talle === talle);
+if (q) listado = listado.filter((p) =>
+  [p.nombre, p.descripcion, p.categoria, p.talle]
+    .filter(Boolean)
+    .some((f) => String(f).toLowerCase().includes(q))
+);
+
+// opcional: ordenar (más nuevos primero si luego agregamos fecha)
 ---
-<BaseLayout title="Catálogo">
-
-  <section class="mx-auto max-w-6xl px-4 py-10">
+<BaseLayout title="Catálogo" description="Explorá el catálogo de Carrot.">
+  <section>
     <h1 class="text-3xl font-bold tracking-tight">Catálogo</h1>
 
     <form class="mt-6 grid gap-3 sm:grid-cols-4" method="get">
       <select name="categoria" class="rounded-lg border px-3 py-2">
         <option value="">Todas las categorías</option>
-        {categorias.map(c => <option selected={c===cat} value={c}>{c}</option>)}
+        {categorias.map((c) => <option selected={c === cat} value={c}>{c}</option>)}
       </select>
 
       <select name="talle" class="rounded-lg border px-3 py-2">
         <option value="">Todos los talles</option>
-        {talles.map(t => <option selected={t===talle} value={t}>{t}</option>)}
+        {talles.map((t) => <option selected={t === talle} value={t}>{t}</option>)}
       </select>
 
-      <input name="q" placeholder="Buscar (ej: negro, denim)"
-        value={q} class="rounded-lg border px-3 py-2" />
+      <input name="q" placeholder="Buscar (ej: negro, denim)" value={q} class="rounded-lg border px-3 py-2" />
 
       <div class="flex gap-2">
-        <button class="rounded-lg bg-orange-600 text-white px-4 py-2">Filtrar</button>
+        <button class="rounded-lg bg-orange-600 px-4 py-2 text-white">Filtrar</button>
         <a href="/catalogo" class="rounded-lg border px-4 py-2">Limpiar</a>
       </div>
     </form>
 
-    {listado.length === 0
-      ? <p class="mt-10 text-stone-600">No hay resultados con esos filtros.</p>
-      : <div class="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-          {listado.map(p => <ProductCard product={p} />)}
-        </div>
-    }
+    {listado.length === 0 ? (
+      <p class="mt-8 text-stone-600">No hay resultados con esos filtros.</p>
+    ) : (
+      <div class="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
+        {listado.map((p) => <ProductCard product={p} />)}
+      </div>
+    )}
   </section>
-
 </BaseLayout>
