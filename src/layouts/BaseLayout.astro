@@ -1,0 +1,35 @@
+---
+import "../styles/global.css"; // importa Tailwind (v4) desde tu global.css
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+const { title = "Carrot", description = "Ropa second hand"} = Astro.props;
+---
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+  </head>
+  <body class="min-h-dvh bg-orange-50 text-stone-900">
+    <header class="border-b border-orange-200">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <a href="/" class="text-2xl font-black">🥕 Carrot</a>
+        <nav class="flex gap-4">
+          <a href="/catalogo" class="hover:underline">Catálogo</a>
+          <a href="/contacto" class="hover:underline">Contacto</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+      <slot />
+    </main>
+
+    <footer class="border-t border-orange-200">
+      <div class="max-w-6xl mx-auto px-4 py-6 text-sm">
+        © {new Date().getFullYear()} Carrot — Montevideo
+      </div>
+    </footer>
+  </body>
+</html>

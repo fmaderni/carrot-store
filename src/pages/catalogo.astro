@@ -1,7 +1,5 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import Header from "../components/Header.astro";
-import Footer from "../components/Footer.astro";
 import ProductCard from "../components/ProductCard.astro";
 import products from "../data/products.json";
 
@@ -22,7 +20,6 @@ const categorias = ["Pantalón", "Remera", "Campera"];
 const talles = ["S", "M", "L"];
 ---
 <BaseLayout title="Catálogo">
-  <Fragment slot="header"><Header /></Fragment>
 
   <section class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl font-bold tracking-tight">Catálogo</h1>
@@ -55,5 +52,4 @@ const talles = ["S", "M", "L"];
     }
   </section>
 
-  <Fragment slot="footer"><Footer /></Fragment>
 </BaseLayout>

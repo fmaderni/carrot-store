@@ -1,63 +1,40 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import Header from "../../components/Header.astro";
-import Footer from "../../components/Footer.astro";
 import products from "../../data/products.json";
 
-const slug = Astro.params.slug;
-const product = products.find(p => p.slug === slug);
-
-if (!product) {
-  throw new Error("Producto no encontrado");
+export async function getStaticPaths() {
+  return products.map((p) => ({
+    params: { slug: p.slug },
+    props: { product: p },
+  }));
 }
 
-const priceFmt = new Intl.NumberFormat('es-UY', {
-  style: 'currency', currency: 'UYU', maximumFractionDigits: 0
-}).format(product.priceUYU);
-
-const agotado = product.stock <= 0;
-const mpNota = "Pago con MercadoPago. Si retiras por local, podés pagar en efectivo.";
+const { product } = Astro.props;
 ---
-<BaseLayout title={product.title} description={`${product.category} vintage en talle(s) ${product.sizes.join(", ")}. ${mpNota}`}>
-  <Fragment slot="header"><Header /></Fragment>
 
-  <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
-    <div class="rounded-2xl border bg-white p-4">
-      <img src={product.images?.[0] ?? "https://picsum.photos/seed/carrot/1000/800"}
-           alt={product.title} class="w-full rounded-xl object-cover" />
-    </div>
-
+<BaseLayout title={product.nombre} description={product.descripcion}>
+  <div class="grid gap-8 md:grid-cols-2">
+    <img
+      src={product.imagen}
+      alt={product.nombre}
+      class="aspect-square w-full rounded-xl border object-cover"
+      loading="eager"
+    />
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">{product.title}</h1>
-      <p class="mt-1 text-stone-500">{product.category} · Color: {product.color}</p>
+      <h1 class="text-2xl font-bold tracking-tight">{product.nombre}</h1>
+      <p class="mt-2 text-stone-600">{product.descripcion}</p>
 
-      <div class="mt-4 flex items-center gap-3">
-        <span class="text-2xl font-extrabold">{priceFmt}</span>
-        {agotado
-          ? <span class="text-xs rounded-full bg-stone-200 px-2 py-1">Agotado</span>
-          : <span class="text-xs rounded-full bg-emerald-100 text-emerald-700 px-2 py-1">Stock: {product.stock}</span>}
-      </div>
+      <p class="mt-4 text-xl font-semibold">{product.precio} UYU</p>
+      <p class="mt-2 text-sm">
+        Talle: {product.talle} · Categoría: {product.categoria}
+      </p>
 
-      <p class="mt-4 text-stone-700">{mpNota}</p>
-
-      <div class="mt-6">
-        <a href="https://wa.me/598" target="_blank"
-           class="rounded-lg bg-orange-600 px-5 py-3 font-medium text-white hover:bg-orange-700">
-          Consultar / Comprar por WhatsApp
-        </a>
-      </div>
-
-      <div class="mt-8">
-        <h3 class="font-semibold">Talle(s) y medidas</h3>
-        <p class="text-sm text-stone-600">Talles: {product.sizes.join(", ")}</p>
-        <ul class="mt-2 grid grid-cols-2 gap-2 text-sm">
-          {Object.entries(product.measurements).map(([k,v]) =>
-            <li class="rounded-lg border bg-white px-3 py-2">{k}: {v} cm</li>
-          )}
-        </ul>
-      </div>
+      <a
+        href="/contacto"
+        class="mt-6 inline-block rounded-lg bg-orange-600 px-5 py-3 text-white"
+      >
+        Comprar por WhatsApp
+      </a>
     </div>
-  </section>
-
-  <Fragment slot="footer"><Footer /></Fragment>
+  </div>
 </BaseLayout>
