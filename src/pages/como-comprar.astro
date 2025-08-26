@@ -1,0 +1,26 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+---
+<BaseLayout title="Cómo comprar">
+  <Fragment slot="header"><Header /></Fragment>
+
+  <section class="mx-auto max-w-3xl px-4 py-10 prose">
+    <h1>Cómo comprar</h1>
+    <ol>
+      <li>Elegí tu prenda desde el <a href="/catalogo">catálogo</a>.</li>
+      <li>Revisá medidas y fotos en fondo blanco (sin sorpresas).</li>
+      <li>Pagá con MercadoPago o en efectivo si retirás por el local.</li>
+      <li>Entrega: pick-up en Montevideo o envíos por zona/DAC.</li>
+      <li>No hay cambios: cada prenda es única y está medida.</li>
+    </ol>
+    <h2>Envíos</h2>
+    <ul>
+      <li>Zonas de Montevideo: coordinamos por WhatsApp.</li>
+      <li>Interior: DAC (costo a cargo del comprador).</li>
+    </ul>
+  </section>
+
+  <Fragment slot="footer"><Footer /></Fragment>
+</BaseLayout>
