@@ -1,40 +1,43 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import products from "../../data/products.json";
+import { products, formatUYU } from "../../data/products";
 
-export async function getStaticPaths() {
+export function getStaticPaths() {
   return products.map((p) => ({
     params: { slug: p.slug },
-    props: { product: p },
+    props: { product: p }
   }));
 }
 
 const { product } = Astro.props;
 ---
 
-<BaseLayout title={product.nombre} description={product.descripcion}>
-  <div class="grid gap-8 md:grid-cols-2">
-    <img
-      src={product.imagen}
-      alt={product.nombre}
-      class="aspect-square w-full rounded-xl border object-cover"
-      loading="eager"
-    />
-    <div>
-      <h1 class="text-2xl font-bold tracking-tight">{product.nombre}</h1>
-      <p class="mt-2 text-stone-600">{product.descripcion}</p>
-
-      <p class="mt-4 text-xl font-semibold">{product.precio} UYU</p>
-      <p class="mt-2 text-sm">
-        Talle: {product.talle} · Categoría: {product.categoria}
-      </p>
-
-      <a
-        href="/contacto"
-        class="mt-6 inline-block rounded-lg bg-orange-600 px-5 py-3 text-white"
-      >
-        Comprar por WhatsApp
-      </a>
+<BaseLayout title={`${product.titulo} | Carrot`} description={`${product.categoria} · Talle ${product.talle} · ${formatUYU(product.precio)}`}>
+  <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
+    <div class="space-y-3">
+      <img src={product.fotos[0]} alt={product.titulo} class="w-full rounded-xl border object-cover" />
+      <!-- Si más adelante querés galería, acá iteramos product.fotos -->
     </div>
-  </div>
+
+    <div>
+      <h1 class="text-3xl font-bold">{product.titulo}</h1>
+      <p class="mt-2 text-stone-600">{product.categoria} · Talle {product.talle}{product.color ? ` · ${product.color}` : ""}</p>
+      <div class="mt-4 text-2xl font-semibold">{formatUYU(product.precio)}</div>
+
+      {product.stock <= 0 ? (
+        <p class="mt-4 inline-block rounded bg-stone-800 px-3 py-1 text-white text-sm">Agotado</p>
+      ) : (
+        <p class="mt-4 text-sm text-stone-600">Stock: {product.stock} unidad{product.stock > 1 ? "es" : ""}</p>
+      )}
+
+      {product.descripcion ? <p class="mt-6 leading-relaxed">{product.descripcion}</p> : null}
+
+      <div class="mt-8 flex gap-3">
+        <a href="/contacto" class="rounded-lg border px-4 py-2">Consultar</a>
+        <button disabled class="rounded-lg bg-orange-600 text-white px-4 py-2 opacity-60 cursor-not-allowed" title="Pronto">Agregar al carrito</button>
+      </div>
+
+      <p class="mt-8 text-sm text-stone-500">Pagás con Mercado Pago o efectivo al retirar. Envíos por zona/DAC o pickup.</p>
+    </div>
+  </section>
 </BaseLayout>
