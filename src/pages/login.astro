@@ -1,0 +1,119 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Entrar o crear cuenta" description="Accedé a tu cuenta de Carrot">
+  <section class="mx-auto max-w-md px-4 py-10">
+    <div class="flex items-center justify-between">
+      <h1 id="form-title" class="text-2xl font-bold">Entrar</h1>
+      <div class="inline-flex rounded-lg overflow-hidden border">
+        <button data-mode-btn="login" class="px-3 py-1 text-sm">Entrar</button>
+        <button data-mode-btn="signup" class="px-3 py-1 text-sm">Crear cuenta</button>
+      </div>
+    </div>
+
+    <form class="mt-6 grid gap-3" onsubmit="return false;">
+      <label class="grid gap-1">
+        <span class="text-sm">Email</span>
+        <input id="email" type="email" required class="rounded-lg border px-3 py-2" placeholder="vos@email.com" />
+      </label>
+
+      <label class="grid gap-1">
+        <span class="text-sm">Contraseña</span>
+        <input id="password" type="password" class="rounded-lg border px-3 py-2" placeholder="mín. 6 caracteres" />
+      </label>
+
+      <button id="mainBtn" type="button" class="mt-1 rounded-lg bg-orange-600 text-white px-4 py-2">
+        Entrar
+      </button>
+
+      <div class="relative my-4">
+        <div class="h-px bg-orange-200"></div>
+        <span id="oauthLabel" class="absolute inset-0 -top-2 mx-auto w-fit bg-orange-50 px-2 text-xs text-stone-500">
+          o entrar con
+        </span>
+      </div>
+
+      <div class="grid gap-2 sm:grid-cols-2">
+        <button id="googleBtn" type="button" class="rounded-lg border px-4 py-2">Google</button>
+        <button id="facebookBtn" type="button" class="rounded-lg border px-4 py-2">Facebook</button>
+      </div>
+
+      <p id="msg" class="mt-3 text-sm"></p>
+    </form>
+  </section>
+
+  <script type="module">
+    import { supabase } from "../lib/supabaseClient";
+
+    const tabs = document.querySelectorAll('[data-mode-btn]');
+    let mode = "login";
+
+    const titleEl = document.getElementById("form-title");
+    const mainBtn = document.getElementById("mainBtn");
+    const oauthLabel = document.getElementById("oauthLabel");
+
+    const emailEl = document.getElementById("email");
+    const passEl  = document.getElementById("password");
+    const msgEl   = document.getElementById("msg");
+
+    function paintTabs() {
+      tabs.forEach(btn => {
+        const active = btn.dataset.modeBtn === mode;
+        btn.className = "px-3 py-1 text-sm " + (active ? "bg-orange-600 text-white" : "bg-transparent text-stone-800");
+      });
+    }
+
+    function setMode(next) {
+      mode = next;
+      titleEl.textContent = mode === "login" ? "Entrar" : "Crear cuenta";
+      mainBtn.textContent = mode === "login" ? "Entrar" : "Crear cuenta";
+      oauthLabel.textContent = mode === "login" ? "o entrar con" : "o crear con";
+      paintTabs();
+    }
+    setMode("login");
+    tabs.forEach(btn => btn.addEventListener("click", () => setMode(btn.dataset.modeBtn)));
+
+    function show(msg, ok=false) {
+      msgEl.textContent = msg;
+      msgEl.className = "mt-3 text-sm " + (ok ? "text-green-700" : "text-red-700");
+    }
+
+    mainBtn.addEventListener("click", async () => {
+      const email = emailEl.value.trim();
+      const password = passEl.value;
+
+      if (!email) return show("Ingresá un email.");
+      if (!password) return show("Ingresá la contraseña.");
+
+      if (mode === "login") {
+        show("Entrando…");
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return show(error.message);
+        show("¡Listo! Redirigiendo…", true);
+        location.href = "/cuenta";
+      } else {
+        show("Creando cuenta…");
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) return show(error.message);
+        if (!data.session) {
+          return show("Te enviamos un email para confirmar la cuenta.", true);
+        }
+        show("Cuenta creada. Redirigiendo…", true);
+        location.href = "/cuenta";
+      }
+    });
+
+    async function signInOAuth(provider) {
+      show("Redirigiendo a " + provider + "…", true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: { redirectTo: `${location.origin}/cuenta` }
+      });
+      if (error) show(error.message);
+    }
+
+    document.getElementById("googleBtn").addEventListener("click", () => signInOAuth("google"));
+    document.getElementById("facebookBtn").addEventListener("click", () => signInOAuth("facebook"));
+  </script>
+</BaseLayout>
