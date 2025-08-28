@@ -1,71 +1,45 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
-import { supabase, fileUrl } from '../../lib/supabaseClient';
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
 
 export async function getStaticPaths() {
-  // Traemos los slugs que estén activos y con stock
   const { data, error } = await supabase
-    .from('products')
-    .select('slug')
-    .eq('is_active', true)
-    .gt('stock', 0);
+    .from("products")
+    .select("slug")
+    .eq("is_active", true);
 
-  if (error) {
+  if (error || !data) {
     console.error(error);
-    return { params: [] };
+    return []; // SIEMPRE devolver un array
   }
 
-  return {
-    params: (data ?? []).map((r: any) => ({ slug: r.slug }))
-  };
+  return data.map((r) => ({ params: { slug: r.slug } }));
 }
 
 const { slug } = Astro.params;
 
-const { data: items, error } = await supabase
-  .from('products')
-  .select('*')
-  .eq('slug', slug)
-  .limit(1);
+const { data: product, error: prodErr } = await supabase
+  .from("products")
+  .select("*")
+  .eq("slug", slug)
+  .eq("is_active", true)
+  .single();
 
-if (error) {
-  console.error(error);
-  throw new Error('Error cargando producto');
+if (prodErr || !product) {
+  throw new Error("Producto no encontrado");
 }
-
-const p = items?.[0];
-if (!p) throw new Error('Producto no encontrado');
-
-const fmt = new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU' });
-
-const coverUrl = fileUrl(p.cover);
-const imageUrls = (p.images ?? []).map((i: string) => fileUrl(i));
 ---
 
-<BaseLayout title={p.title} description={p.summary ?? p.title}>
-  <article class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
-    <div class="space-y-4">
-      <img src={coverUrl} alt={p.title} class="w-full rounded-xl border" loading="eager" />
-      {imageUrls.filter((img) => img !== coverUrl).map((img) => (
-        <img src={img} alt={`${p.title} detalle`} class="w-full rounded-xl border" loading="lazy" />
-      ))}
-    </div>
-
-    <div>
-      <h1 class="text-3xl font-bold tracking-tight">{p.title}</h1>
-      <p class="mt-2 text-2xl">{fmt.format(p.price)}</p>
-
-      {p.sizes?.length ? (
-        <p class="mt-4 text-sm">Talles: <strong>{p.sizes.join(', ')}</strong></p>
-      ) : null}
-
-      {p.colors?.length ? (
-        <p class="mt-2 text-sm">Colores: <strong>{p.colors.join(', ')}</strong></p>
-      ) : null}
-
-      {p.summary ? <p class="mt-6 text-stone-700">{p.summary}</p> : null}
-
-      <a href="/catalogo" class="mt-8 inline-block rounded-lg border px-4 py-2">← Volver al catálogo</a>
-    </div>
-  </article>
+<BaseLayout title={product.title} description={product.description}>
+  <section class="mx-auto max-w-6xl px-4 py-10">
+    <h1 class="text-3xl font-bold">{product.title}</h1>
+    <p class="mt-2 text-stone-700">{product.description}</p>
+    {product.price ? <p class="mt-4 text-xl font-semibold">USD {product.price}</p> : null}
+    {product.image_url ? <img class="mt-6 rounded-lg" src={product.image_url} alt={product.title} /> : null}
+  </section>
 </BaseLayout>
