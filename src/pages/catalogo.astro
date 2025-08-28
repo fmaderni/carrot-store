@@ -1,58 +1,47 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import ProductCard from "../components/ProductCard.astro";
-import products from "../data/products.json";
+import { createClient } from "@supabase/supabase-js";
 
-const params = Astro.url.searchParams;
-const cat = params.get("categoria") || "";
-const talle = params.get("talle") || "";
-const q = (params.get("q") || "").toLowerCase().trim();
-
-// listas únicas a partir de los datos
-const categorias = Array.from(new Set(products.map((p) => p.categoria).filter(Boolean)));
-const talles = Array.from(new Set(products.map((p) => p.talle).filter(Boolean)));
-
-let listado = products;
-
-// filtros
-if (cat) listado = listado.filter((p) => p.categoria === cat);
-if (talle) listado = listado.filter((p) => p.talle === talle);
-if (q) listado = listado.filter((p) =>
-  [p.nombre, p.descripcion, p.categoria, p.talle]
-    .filter(Boolean)
-    .some((f) => String(f).toLowerCase().includes(q))
+// Cliente de Supabase usando las env PUBLIC_ (ya puestas en Cloudflare)
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
 );
 
-// opcional: ordenar (más nuevos primero si luego agregamos fecha)
+// Traemos todos los productos activos al momento del build
+const { data: products, error } = await supabase
+  .from("products")
+  .select("id, slug, title, description, price, image_url, category, size, created_at")
+  .eq("is_active", true)
+  .order("created_at", { ascending: false });
+
+if (error) {
+  console.error("Error cargando catálogo desde Supabase:", error);
+}
 ---
-<BaseLayout title="Catálogo" description="Explorá el catálogo de Carrot.">
-  <section>
+
+<BaseLayout title="Catálogo" description="Catálogo de productos de Carrot">
+  <section class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl font-bold tracking-tight">Catálogo</h1>
 
-    <form class="mt-6 grid gap-3 sm:grid-cols-4" method="get">
-      <select name="categoria" class="rounded-lg border px-3 py-2">
-        <option value="">Todas las categorías</option>
-        {categorias.map((c) => <option selected={c === cat} value={c}>{c}</option>)}
-      </select>
-
-      <select name="talle" class="rounded-lg border px-3 py-2">
-        <option value="">Todos los talles</option>
-        {talles.map((t) => <option selected={t === talle} value={t}>{t}</option>)}
-      </select>
-
-      <input name="q" placeholder="Buscar (ej: negro, denim)" value={q} class="rounded-lg border px-3 py-2" />
-
-      <div class="flex gap-2">
-        <button class="rounded-lg bg-orange-600 px-4 py-2 text-white">Filtrar</button>
-        <a href="/catalogo" class="rounded-lg border px-4 py-2">Limpiar</a>
-      </div>
-    </form>
-
-    {listado.length === 0 ? (
-      <p class="mt-8 text-stone-600">No hay resultados con esos filtros.</p>
+    {(!products || products.length === 0) ? (
+      <p class="mt-8 text-stone-600">No hay productos activos todavía.</p>
     ) : (
       <div class="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {listado.map((p) => <ProductCard product={p} />)}
+        {
+          products.map((p) => (
+            <a href={`/producto/${p.slug}`} class="block rounded-lg border border-orange-200 bg-white/50 p-3 hover:shadow">
+              {p.image_url ? (
+                <img src={p.image_url} alt={p.title} class="aspect-square w-full rounded-md object-cover" loading="lazy" />
+              ) : null}
+              <div class="mt-3">
+                <h3 class="font-medium">{p.title}</h3>
+                <p class="mt-1 text-sm text-stone-600">{p.category}{p.size ? ` · ${p.size}` : ""}</p>
+                {p.price ? <p class="mt-2 text-sm font-semibold">USD {p.price}</p> : null}
+              </div>
+            </a>
+          ))
+        }
       </div>
     )}
   </section>

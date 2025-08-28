@@ -2,19 +2,22 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
+// factoría para crear el cliente con las PUBLIC_ envs
+const makeClient = () =>
+  createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
 
 export async function getStaticPaths() {
+  const supabase = makeClient(); // <— cliente local a la función
   const { data, error } = await supabase
     .from("products")
     .select("slug")
     .eq("is_active", true);
 
   if (error || !data) {
-    console.error(error);
+    console.error("getStaticPaths products error:", error);
     return []; // SIEMPRE devolver un array
   }
 
@@ -23,6 +26,7 @@ export async function getStaticPaths() {
 
 const { slug } = Astro.params;
 
+const supabase = makeClient();
 const { data: product, error: prodErr } = await supabase
   .from("products")
   .select("*")
@@ -40,6 +44,8 @@ if (prodErr || !product) {
     <h1 class="text-3xl font-bold">{product.title}</h1>
     <p class="mt-2 text-stone-700">{product.description}</p>
     {product.price ? <p class="mt-4 text-xl font-semibold">USD {product.price}</p> : null}
-    {product.image_url ? <img class="mt-6 rounded-lg" src={product.image_url} alt={product.title} /> : null}
+    {product.image_url ? (
+      <img class="mt-6 rounded-lg" src={product.image_url} alt={product.title} />
+    ) : null}
   </section>
 </BaseLayout>
