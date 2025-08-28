@@ -1,35 +1,42 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
 ---
-<BaseLayout title="Mi cuenta">
-  <section class="mx-auto max-w-3xl px-4 py-10">
-    <h1 class="text-3xl font-bold">Mi cuenta</h1>
-    <div id="cuenta" class="mt-6 text-stone-800"></div>
 
-    <script client:load>
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabase = createClient(
-        import.meta.env.PUBLIC_SUPABASE_URL,
-        import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-      );
-
-      const target = document.getElementById('cuenta');
-      const { data: { session } } = await supabase.auth.getSession();
-
-      if (!session) {
-        target.innerHTML = `
-          <p>No iniciaste sesión.</p>
-          <p class="mt-2"><a href="/catalogo" class="underline">Ir al catálogo</a></p>
-        `;
-      } else {
-        const { user } = session;
-        target.innerHTML = `
-          <div class="space-y-2">
-            <p><strong>Email:</strong> ${user.email ?? ''}</p>
-            <p><strong>UID:</strong> ${user.id}</p>
-          </div>
-        `;
-      }
-    </script>
+<BaseLayout title="Mi cuenta" description="Tu cuenta en Carrot">
+  <section class="mx-auto max-w-2xl px-4 py-10">
+    <h1 class="text-2xl font-bold">Mi cuenta</h1>
+    <p id="status" class="mt-4 text-stone-700">Cargando…</p>
+    <div id="content" class="mt-6 hidden">
+      <p class="text-stone-700">Hola, <span id="email"></span>.</p>
+      <button id="logout" class="mt-4 rounded-lg border px-4 py-2">Cerrar sesión</button>
+    </div>
   </section>
+
+  <script type="module">
+    import { supabase } from "../../lib/supabaseClient";
+
+    const statusEl = document.getElementById("status");
+    const contentEl = document.getElementById("content");
+    const emailEl  = document.getElementById("email");
+    const logoutBtn = document.getElementById("logout");
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        statusEl.textContent = "No estás logueado. Redirigiendo al login…";
+        location.href = "/login";
+        return;
+      }
+      emailEl.textContent = session.user.email || "Usuario";
+      statusEl.classList.add("hidden");
+      contentEl.classList.remove("hidden");
+    }
+
+    logoutBtn?.addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      location.href = "/login";
+    });
+
+    init();
+  </script>
 </BaseLayout>
