@@ -1,47 +1,81 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ProductCard from "../components/ProductCard.astro";
 import { createClient } from "@supabase/supabase-js";
 
-// Cliente de Supabase usando las env PUBLIC_ (ya puestas en Cloudflare)
 const supabase = createClient(
   import.meta.env.PUBLIC_SUPABASE_URL,
   import.meta.env.PUBLIC_SUPABASE_ANON_KEY
 );
 
-// Traemos todos los productos activos al momento del build
-const { data: products, error } = await supabase
+// Filtros simples por querystring (dejá esto igual si ya lo tenías)
+const cat   = Astro.url.searchParams.get("categoria") ?? "";
+const talle = Astro.url.searchParams.get("talle") ?? "";
+const q     = Astro.url.searchParams.get("q") ?? "";
+
+// Construcción del query
+let query = supabase
   .from("products")
-  .select("id, slug, title, description, price, image_url, category, size, created_at")
+  .select(
+    "id, slug, name, price, category, size, color, cover_url, image_urls, is_active, created_at"
+  )
   .eq("is_active", true)
   .order("created_at", { ascending: false });
 
+if (cat)   query = query.eq("category", cat);
+if (talle) query = query.eq("size", talle);
+if (q)     query = query.ilike("name", `%${q}%`);
+
+const { data, error } = await query;
 if (error) {
   console.error("Error cargando catálogo desde Supabase:", error);
 }
+
+const listado = (data ?? []).map((p) => ({
+  ...p,
+  // Para que ProductCard funcione aunque espere estos nombres
+  title: p.name,
+  image_url: p.cover_url ?? (p.image_urls && p.image_urls[0]) ?? null,
+}));
+
+// (Si usás selects de categorías/talles, podés derivarlos del dataset)
+const categorias = Array.from(new Set(listado.map((p) => p.category).filter(Boolean)));
+const talles     = Array.from(new Set(listado.map((p) => p.size).filter(Boolean)));
 ---
 
-<BaseLayout title="Catálogo" description="Catálogo de productos de Carrot">
+<BaseLayout title="Catálogo" description="Productos disponibles">
   <section class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl font-bold tracking-tight">Catálogo</h1>
 
-    {(!products || products.length === 0) ? (
-      <p class="mt-8 text-stone-600">No hay productos activos todavía.</p>
+    <form class="mt-6 grid gap-3 sm:grid-cols-4" method="get">
+      <select name="categoria" class="rounded-lg border px-3 py-2">
+        <option value="">Todas las categorías</option>
+        {categorias.map((c) => (
+          <option selected={c === cat} value={c}>{c}</option>
+        ))}
+      </select>
+      <select name="talle" class="rounded-lg border px-3 py-2">
+        <option value="">Todos los talles</option>
+        {talles.map((t) => (
+          <option selected={t === talle} value={t}>{t}</option>
+        ))}
+      </select>
+      <input
+        name="q"
+        placeholder="Buscar (ej: negro, denim)"
+        value={q}
+        class="rounded-lg border px-3 py-2" />
+      <div class="flex gap-2">
+        <button class="rounded-lg bg-orange-600 text-white px-4 py-2">Filtrar</button>
+        <a href="/catalogo" class="rounded-lg border px-4 py-2">Limpiar</a>
+      </div>
+    </form>
+
+    {listado.length === 0 ? (
+      <p class="mt-10 text-stone-600">No hay resultados con esos filtros.</p>
     ) : (
       <div class="mt-8 grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {
-          products.map((p) => (
-            <a href={`/producto/${p.slug}`} class="block rounded-lg border border-orange-200 bg-white/50 p-3 hover:shadow">
-              {p.image_url ? (
-                <img src={p.image_url} alt={p.title} class="aspect-square w-full rounded-md object-cover" loading="lazy" />
-              ) : null}
-              <div class="mt-3">
-                <h3 class="font-medium">{p.title}</h3>
-                <p class="mt-1 text-sm text-stone-600">{p.category}{p.size ? ` · ${p.size}` : ""}</p>
-                {p.price ? <p class="mt-2 text-sm font-semibold">USD {p.price}</p> : null}
-              </div>
-            </a>
-          ))
-        }
+        {listado.map((p) => <ProductCard product={p} />)}
       </div>
     )}
   </section>
