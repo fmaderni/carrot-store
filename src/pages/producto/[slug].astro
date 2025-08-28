@@ -1,43 +1,71 @@
 ---
-import BaseLayout from "../../layouts/BaseLayout.astro";
-import { products, formatUYU } from "../../data/products";
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { supabase, fileUrl } from '../../lib/supabaseClient';
 
-export function getStaticPaths() {
-  return products.map((p) => ({
-    params: { slug: p.slug },
-    props: { product: p }
-  }));
+export async function getStaticPaths() {
+  // Traemos los slugs que estén activos y con stock
+  const { data, error } = await supabase
+    .from('products')
+    .select('slug')
+    .eq('is_active', true)
+    .gt('stock', 0);
+
+  if (error) {
+    console.error(error);
+    return { params: [] };
+  }
+
+  return {
+    params: (data ?? []).map((r: any) => ({ slug: r.slug }))
+  };
 }
 
-const { product } = Astro.props;
+const { slug } = Astro.params;
+
+const { data: items, error } = await supabase
+  .from('products')
+  .select('*')
+  .eq('slug', slug)
+  .limit(1);
+
+if (error) {
+  console.error(error);
+  throw new Error('Error cargando producto');
+}
+
+const p = items?.[0];
+if (!p) throw new Error('Producto no encontrado');
+
+const fmt = new Intl.NumberFormat('es-UY', { style: 'currency', currency: 'UYU' });
+
+const coverUrl = fileUrl(p.cover);
+const imageUrls = (p.images ?? []).map((i: string) => fileUrl(i));
 ---
 
-<BaseLayout title={`${product.titulo} | Carrot`} description={`${product.categoria} · Talle ${product.talle} · ${formatUYU(product.precio)}`}>
-  <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
-    <div class="space-y-3">
-      <img src={product.fotos[0]} alt={product.titulo} class="w-full rounded-xl border object-cover" />
-      <!-- Si más adelante querés galería, acá iteramos product.fotos -->
+<BaseLayout title={p.title} description={p.summary ?? p.title}>
+  <article class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
+    <div class="space-y-4">
+      <img src={coverUrl} alt={p.title} class="w-full rounded-xl border" loading="eager" />
+      {imageUrls.filter((img) => img !== coverUrl).map((img) => (
+        <img src={img} alt={`${p.title} detalle`} class="w-full rounded-xl border" loading="lazy" />
+      ))}
     </div>
 
     <div>
-      <h1 class="text-3xl font-bold">{product.titulo}</h1>
-      <p class="mt-2 text-stone-600">{product.categoria} · Talle {product.talle}{product.color ? ` · ${product.color}` : ""}</p>
-      <div class="mt-4 text-2xl font-semibold">{formatUYU(product.precio)}</div>
+      <h1 class="text-3xl font-bold tracking-tight">{p.title}</h1>
+      <p class="mt-2 text-2xl">{fmt.format(p.price)}</p>
 
-      {product.stock <= 0 ? (
-        <p class="mt-4 inline-block rounded bg-stone-800 px-3 py-1 text-white text-sm">Agotado</p>
-      ) : (
-        <p class="mt-4 text-sm text-stone-600">Stock: {product.stock} unidad{product.stock > 1 ? "es" : ""}</p>
-      )}
+      {p.sizes?.length ? (
+        <p class="mt-4 text-sm">Talles: <strong>{p.sizes.join(', ')}</strong></p>
+      ) : null}
 
-      {product.descripcion ? <p class="mt-6 leading-relaxed">{product.descripcion}</p> : null}
+      {p.colors?.length ? (
+        <p class="mt-2 text-sm">Colores: <strong>{p.colors.join(', ')}</strong></p>
+      ) : null}
 
-      <div class="mt-8 flex gap-3">
-        <a href="/contacto" class="rounded-lg border px-4 py-2">Consultar</a>
-        <button disabled class="rounded-lg bg-orange-600 text-white px-4 py-2 opacity-60 cursor-not-allowed" title="Pronto">Agregar al carrito</button>
-      </div>
+      {p.summary ? <p class="mt-6 text-stone-700">{p.summary}</p> : null}
 
-      <p class="mt-8 text-sm text-stone-500">Pagás con Mercado Pago o efectivo al retirar. Envíos por zona/DAC o pickup.</p>
+      <a href="/catalogo" class="mt-8 inline-block rounded-lg border px-4 py-2">← Volver al catálogo</a>
     </div>
-  </section>
+  </article>
 </BaseLayout>
