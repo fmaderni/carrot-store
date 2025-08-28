@@ -2,12 +2,13 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-const url  = import.meta.env.PUBLIC_SUPABASE_URL;
-const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
 /** Genera las rutas estáticas /producto/:slug */
 export async function getStaticPaths() {
-  const supabase = createClient(url, anon);
+  const supabase = createClient(
+    import.meta.env.PUBLIC_SUPABASE_URL,
+    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+  );
+
   const { data, error } = await supabase
     .from("products")
     .select("slug")
@@ -18,25 +19,36 @@ export async function getStaticPaths() {
 }
 
 /** Carga el producto para el slug actual */
-const supabase = createClient(url, anon);
+const supabase = createClient(
+  import.meta.env.PUBLIC_SUPABASE_URL,
+  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+);
+
 const { slug } = Astro.params;
 
 const { data: product, error } = await supabase
   .from("products")
-  .select("id, slug, name, description, price, category, size, color, cover_url, image_urls")
+  .select(
+    "id, slug, name, description, price, category, size, color, cover_url, image_urls"
+  )
   .eq("slug", slug)
   .single();
 
 if (error) throw new Error(error.message);
+
+const image =
+  product.cover_url ?? (product.image_urls && product.image_urls[0]) ?? null;
 ---
 
-<BaseLayout title={product.title} description={product.description}>
+<BaseLayout title={product.name} description={product.description}>
   <section class="mx-auto max-w-6xl px-4 py-10">
-    <h1 class="text-3xl font-bold">{product.title}</h1>
+    <h1 class="text-3xl font-bold">{product.name}</h1>
     <p class="mt-2 text-stone-700">{product.description}</p>
-    {product.price ? <p class="mt-4 text-xl font-semibold">USD {product.price}</p> : null}
-    {product.image_url ? (
-      <img class="mt-6 rounded-lg" src={product.image_url} alt={product.title} />
+    {product.price ? (
+      <p class="mt-4 text-xl font-semibold">USD {product.price}</p>
+    ) : null}
+    {image ? (
+      <img class="mt-6 rounded-lg" src={image} alt={product.name} />
     ) : null}
   </section>
 </BaseLayout>
