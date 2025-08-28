@@ -1,0 +1,46 @@
+---
+const btnClass = "text-sm border rounded-lg px-3 py-1 hover:bg-orange-100";
+---
+<div class="flex items-center gap-3" id="auth-box">
+  <a href="/cuenta" id="cuenta-link" class="hidden">Mi cuenta</a>
+  <button id="login" class={btnClass}>Ingresar con Google</button>
+  <button id="logout" class={`${btnClass} hidden`}>Salir</button>
+</div>
+
+<script client:load>
+  const load = async () => {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      import.meta.env.PUBLIC_SUPABASE_URL,
+      import.meta.env.PUBLIC_SUPABASE_ANON_KEY
+    );
+
+    const $login  = document.getElementById('login');
+    const $logout = document.getElementById('logout');
+    const $link   = document.getElementById('cuenta-link');
+
+    const refresh = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const logged = !!session;
+      $login.classList.toggle('hidden', logged);
+      $logout.classList.toggle('hidden', !logged);
+      $link.classList.toggle('hidden', !logged);
+    };
+
+    $login.onclick = () =>
+      supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin + '/cuenta' }
+      });
+
+    $logout.onclick = async () => {
+      await supabase.auth.signOut();
+      await refresh();
+    };
+
+    supabase.auth.onAuthStateChange(() => refresh());
+    refresh();
+  };
+
+  load();
+</script>

@@ -1,5 +1,7 @@
 ---
 import "../styles/global.css";
+import AuthButtons from "../components/AuthButtons.astro";
+const { title = "Carrot", description = "Ropa second hand" } = Astro.props;
 
 const SITE = "Carrot";
 const DEFAULT_DESC = "Ropa second hand";
@@ -51,6 +53,7 @@ const canonical = Astro.url?.href;
           <a href="/catalogo" class="hover:underline">Catálogo</a>
           <a href="/como-comprar" class="hover:underline">Cómo comprar</a>
           <a href="/contacto" class="hover:underline">Contacto</a>
+          <AuthButtons>
         </nav>
       </div>
     </header>
