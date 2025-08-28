@@ -2,41 +2,32 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-// factoría para crear el cliente con las PUBLIC_ envs
-const makeClient = () =>
-  createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-  );
+const url  = import.meta.env.PUBLIC_SUPABASE_URL;
+const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+/** Genera las rutas estáticas /producto/:slug */
 export async function getStaticPaths() {
-  const supabase = makeClient(); // <— cliente local a la función
+  const supabase = createClient(url, anon);
   const { data, error } = await supabase
     .from("products")
     .select("slug")
     .eq("is_active", true);
 
-  if (error || !data) {
-    console.error("getStaticPaths products error:", error);
-    return []; // SIEMPRE devolver un array
-  }
-
-  return data.map((r) => ({ params: { slug: r.slug } }));
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => ({ params: { slug: row.slug } }));
 }
 
+/** Carga el producto para el slug actual */
+const supabase = createClient(url, anon);
 const { slug } = Astro.params;
 
-const supabase = makeClient();
-const { data: product, error: prodErr } = await supabase
+const { data: product, error } = await supabase
   .from("products")
-  .select("*")
+  .select("id, slug, name, description, price, category, size, color, cover_url, image_urls")
   .eq("slug", slug)
-  .eq("is_active", true)
   .single();
 
-if (prodErr || !product) {
-  throw new Error("Producto no encontrado");
-}
+if (error) throw new Error(error.message);
 ---
 
 <BaseLayout title={product.title} description={product.description}>
