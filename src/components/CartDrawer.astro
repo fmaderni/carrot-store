@@ -1,3 +1,6 @@
+---
+// src/components/CartDrawer.astro
+---
 <aside
   id="cart-drawer"
   class="fixed right-0 top-0 h-dvh w-[380px] max-w-[90vw] bg-white shadow-2xl border-l border-orange-200 translate-x-full transition-transform duration-300 z-50 flex flex-col"
@@ -26,126 +29,123 @@
   class="fixed inset-0 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
 ></div>
 
-<script type="module" client:load>
-  import * as cart from "../lib/cart";
+<script>
+  (function () {
+    const drawer = document.getElementById("cart-drawer");
+    const overlay = document.getElementById("cart-overlay");
+    const itemsEl = document.getElementById("cart-items");
+    const subtotalEl = document.getElementById("cart-subtotal");
 
-  const drawer = document.getElementById("cart-drawer");
-  const overlay = document.getElementById("cart-overlay");
-  const itemsEl = document.getElementById("cart-items");
-  const subtotalEl = document.getElementById("cart-subtotal");
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem("cart") || "[]"); }
+      catch { return []; }
+    }
+    function setCart(next) {
+      localStorage.setItem("cart", JSON.stringify(next));
+      window.dispatchEvent(new CustomEvent("cart:updated"));
+    }
+    function subtotal(list) {
+      return list.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+    }
+    function fmt(n) {
+      try { return new Intl.NumberFormat("es-UY", { style: "currency", currency: "USD"}).format(n); }
+      catch { return `USD ${n.toFixed(2)}`; }
+    }
 
-  function getCart() {
-    if (cart.getCart) return cart.getCart();
-    try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; }
-  }
-  function setCart(next) {
-    if (cart.setCart) cart.setCart(next);
-    else localStorage.setItem("cart", JSON.stringify(next));
-    window.dispatchEvent(new CustomEvent("cart:updated"));
-  }
-  function subtotal(list) {
-    return list.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
-  }
-  function fmt(n) {
-    try { return new Intl.NumberFormat("es-UY", { style: "currency", currency: "USD"}).format(n); }
-    catch { return `USD ${n.toFixed(2)}`; }
-  }
-
-  function render() {
-    const list = getCart();
-    itemsEl.innerHTML = "";
-    if (list.length === 0) {
-      itemsEl.innerHTML = '<p class="text-sm text-stone-600">Tu carrito está vacío.</p>';
-    } else {
-      for (const it of list) {
-        const row = document.createElement("div");
-        row.className = "grid grid-cols-[64px_1fr_auto] gap-3 items-center";
-        row.innerHTML = `
-          <img src="${it.cover_url || (it.image_urls?.[0] || "")}" alt="${it.name || ""}" class="h-16 w-16 object-cover rounded">
-          <div>
-            <a href="/producto/${it.slug || it.id}" class="font-medium line-clamp-1">${it.name || "Producto"}</a>
-            <div class="text-xs text-stone-600 mt-0.5">USD ${Number(it.price || 0)}</div>
-            <div class="mt-1 flex items-center gap-2">
-              <button data-act="dec" data-id="${it.id}" class="h-6 w-6 border rounded">-</button>
-              <input data-id="${it.id}" class="w-10 h-6 text-center border rounded" value="${it.qty || 1}">
-              <button data-act="inc" data-id="${it.id}" class="h-6 w-6 border rounded">+</button>
+    function render() {
+      const list = getCart();
+      itemsEl.innerHTML = "";
+      if (list.length === 0) {
+        itemsEl.innerHTML = '<p class="text-sm text-stone-600">Tu carrito está vacío.</p>';
+      } else {
+        for (const it of list) {
+          const row = document.createElement("div");
+          row.className = "grid grid-cols-[64px_1fr_auto] gap-3 items-center";
+          row.innerHTML = `
+            <img src="${it.cover_url || (it.image_urls?.[0] || "")}" alt="${it.name || ""}" class="h-16 w-16 object-cover rounded">
+            <div>
+              <a href="/producto/${it.slug || it.id}" class="font-medium line-clamp-1">${it.name || "Producto"}</a>
+              <div class="text-xs text-stone-600 mt-0.5">USD ${Number(it.price || 0)}</div>
+              <div class="mt-1 flex items-center gap-2">
+                <button data-act="dec" data-id="${it.id}" class="h-6 w-6 border rounded">-</button>
+                <input data-id="${it.id}" class="w-10 h-6 text-center border rounded" value="${it.qty || 1}">
+                <button data-act="inc" data-id="${it.id}" class="h-6 w-6 border rounded">+</button>
+              </div>
             </div>
-          </div>
-          <button data-act="remove" data-id="${it.id}" class="text-sm text-red-600 hover:underline">Quitar</button>
-        `;
-        itemsEl.appendChild(row);
+            <button data-act="remove" data-id="${it.id}" class="text-sm text-red-600 hover:underline">Quitar</button>
+          `;
+          itemsEl.appendChild(row);
+        }
       }
+      subtotalEl.textContent = fmt(subtotal(list));
     }
-    subtotalEl.textContent = fmt(subtotal(list));
-  }
 
-  function open() {
-    drawer.classList.remove("translate-x-full");
-    drawer.classList.add("translate-x-0");
-    overlay.classList.remove("opacity-0", "pointer-events-none");
-    overlay.classList.add("opacity-100");
-  }
-  function close() {
-    drawer.classList.add("translate-x-full");
-    drawer.classList.remove("translate-x-0");
-    overlay.classList.add("opacity-0", "pointer-events-none");
-    overlay.classList.remove("opacity-100");
-  }
+    function open() {
+      drawer.classList.remove("translate-x-full");
+      drawer.classList.add("translate-x-0");
+      overlay.classList.remove("opacity-0", "pointer-events-none");
+      overlay.classList.add("opacity-100");
+    }
+    function close() {
+      drawer.classList.add("translate-x-full");
+      drawer.classList.remove("translate-x-0");
+      overlay.classList.add("opacity-0", "pointer-events-none");
+      overlay.classList.remove("opacity-100");
+    }
 
-  document.getElementById("cart-close")?.addEventListener("click", close);
-  overlay.addEventListener("click", close);
+    document.getElementById("cart-close")?.addEventListener("click", close);
+    overlay.addEventListener("click", close);
 
-  itemsEl.addEventListener("click", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLElement)) return;
-    const id = t.getAttribute("data-id");
-    if (!id) return;
-    const list = getCart();
-    const idx = list.findIndex((x) => String(x.id) === String(id));
-    if (idx < 0) return;
+    itemsEl.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      const id = t.getAttribute("data-id");
+      if (!id) return;
+      const list = getCart();
+      const idx = list.findIndex((x) => String(x.id) === String(id));
+      if (idx < 0) return;
 
-    if (t.getAttribute("data-act") === "remove") {
-      list.splice(idx, 1);
+      if (t.getAttribute("data-act") === "remove") {
+        list.splice(idx, 1);
+        setCart(list);
+        render();
+      }
+      if (t.getAttribute("data-act") === "inc") {
+        list[idx].qty = (Number(list[idx].qty) || 1) + 1;
+        setCart(list);
+        render();
+      }
+      if (t.getAttribute("data-act") === "dec") {
+        const next = (Number(list[idx].qty) || 1) - 1;
+        list[idx].qty = Math.max(1, next);
+        setCart(list);
+        render();
+      }
+    });
+
+    itemsEl.addEventListener("change", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      const id = t.getAttribute("data-id");
+      if (!id) return;
+      const list = getCart();
+      const idx = list.findIndex((x) => String(x.id) === String(id));
+      if (idx < 0) return;
+      const q = Math.max(1, Number(t.value) || 1);
+      list[idx].qty = q;
       setCart(list);
       render();
-    }
-    if (t.getAttribute("data-act") === "inc") {
-      list[idx].qty = (Number(list[idx].qty) || 1) + 1;
-      setCart(list);
-      render();
-    }
-    if (t.getAttribute("data-act") === "dec") {
-      const next = (Number(list[idx].qty) || 1) - 1;
-      list[idx].qty = Math.max(1, next);
-      setCart(list);
-      render();
-    }
-  });
+    });
 
-  itemsEl.addEventListener("change", (e) => {
-    const t = e.target;
-    if (!(t instanceof HTMLInputElement)) return;
-    const id = t.getAttribute("data-id");
-    if (!id) return;
-    const list = getCart();
-    const idx = list.findIndex((x) => String(x.id) === String(id));
-    if (idx < 0) return;
-    const q = Math.max(1, Number(t.value) || 1);
-    list[idx].qty = q;
-    setCart(list);
+    // Eventos globales
+    window.addEventListener("cart:open", () => { render(); open(); });
+    window.addEventListener("cart:toggle", () => {
+      if (drawer.classList.contains("translate-x-full")) { render(); open(); }
+      else close();
+    });
+    window.addEventListener("cart:updated", render);
+
+    // Render inicial
     render();
-  });
-
-  // Eventos globales
-  window.addEventListener("cart:open", () => { render(); open(); });
-  window.addEventListener("cart:toggle", () => {
-    if (drawer.classList.contains("translate-x-full")) { render(); open(); }
-    else close();
-  });
-  window.addEventListener("cart:updated", render);
-
-  // Exponer opcionalmente
-  window.cartDrawer = { open, close, render };
-
-  render();
+  })();
 </script>
