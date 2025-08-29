@@ -1,18 +1,22 @@
 <!-- src/components/CartBadge.astro -->
-<a href="/carrito" class="relative inline-flex items-center gap-2">
+<a href="#cart-drawer" class="relative inline-flex items-center gap-2" id="cart-badge">
   🛒
   <span id="cart-count" class="text-xs rounded-full border px-2 py-0.5">0</span>
 </a>
 
-<script type="module" client:load>
-  import { cartCount } from "../lib/cart";
-
-  const el = document.getElementById("cart-count");
-
-  const update = () => {
-    if (el) el.textContent = String(cartCount());
-  };
-
-  update();
-  window.addEventListener("cart:updated", update);
+<script>
+  (function () {
+    function getCart() {
+      try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; }
+    }
+    function count() {
+      return getCart().reduce((n, it) => n + (Number(it.qty) || 1), 0);
+    }
+    function update() {
+      const el = document.getElementById("cart-count");
+      if (el) el.textContent = String(count());
+    }
+    update();
+    window.addEventListener("cart:updated", update);
+  })();
 </script>

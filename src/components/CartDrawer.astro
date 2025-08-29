@@ -7,7 +7,7 @@
 >
   <div class="flex items-center justify-between px-4 py-3 border-b">
     <h2 class="text-lg font-semibold">Tu carrito</h2>
-    <button id="cart-close" aria-label="Cerrar" class="text-2xl leading-none">×</button>
+    <a href="#" aria-label="Cerrar" class="text-2xl leading-none">×</a>
   </div>
 
   <div id="cart-items" class="p-4 flex flex-col gap-3 overflow-y-auto" style="max-height: calc(100dvh - 200px)"></div>
@@ -24,21 +24,27 @@
   </div>
 </aside>
 
-<div
+<a
+  href="#"
   id="cart-overlay"
   class="fixed inset-0 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
-></div>
+></a>
+
+<style>
+  /* Abrir/cerrar solo con #hash, sin depender de JS */
+  #cart-drawer { transform: translateX(100%); }
+  #cart-drawer:target { transform: translateX(0); }
+  #cart-overlay { opacity: 0; pointer-events: none; }
+  #cart-drawer:target + #cart-overlay { opacity: 1; pointer-events: auto; }
+</style>
 
 <script>
   (function () {
-    const drawer = document.getElementById("cart-drawer");
-    const overlay = document.getElementById("cart-overlay");
     const itemsEl = document.getElementById("cart-items");
     const subtotalEl = document.getElementById("cart-subtotal");
 
     function getCart() {
-      try { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-      catch { return []; }
+      try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; }
     }
     function setCart(next) {
       localStorage.setItem("cart", JSON.stringify(next));
@@ -48,7 +54,7 @@
       return list.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
     }
     function fmt(n) {
-      try { return new Intl.NumberFormat("es-UY", { style: "currency", currency: "USD"}).format(n); }
+      try { return new Intl.NumberFormat("es-UY",{style:"currency",currency:"USD"}).format(n); }
       catch { return `USD ${n.toFixed(2)}`; }
     }
 
@@ -80,72 +86,40 @@
       subtotalEl.textContent = fmt(subtotal(list));
     }
 
-    function open() {
-      drawer.classList.remove("translate-x-full");
-      drawer.classList.add("translate-x-0");
-      overlay.classList.remove("opacity-0", "pointer-events-none");
-      overlay.classList.add("opacity-100");
-    }
-    function close() {
-      drawer.classList.add("translate-x-full");
-      drawer.classList.remove("translate-x-0");
-      overlay.classList.add("opacity-0", "pointer-events-none");
-      overlay.classList.remove("opacity-100");
-    }
-
-    document.getElementById("cart-close")?.addEventListener("click", close);
-    overlay.addEventListener("click", close);
-
+    // Interacciones
     itemsEl.addEventListener("click", (e) => {
       const t = e.target;
       if (!(t instanceof HTMLElement)) return;
-      const id = t.getAttribute("data-id");
-      if (!id) return;
+      const id = t.getAttribute("data-id"); if (!id) return;
       const list = getCart();
-      const idx = list.findIndex((x) => String(x.id) === String(id));
-      if (idx < 0) return;
+      const idx = list.findIndex(x => String(x.id) === String(id)); if (idx < 0) return;
 
-      if (t.getAttribute("data-act") === "remove") {
-        list.splice(idx, 1);
-        setCart(list);
-        render();
-      }
-      if (t.getAttribute("data-act") === "inc") {
-        list[idx].qty = (Number(list[idx].qty) || 1) + 1;
-        setCart(list);
-        render();
-      }
-      if (t.getAttribute("data-act") === "dec") {
-        const next = (Number(list[idx].qty) || 1) - 1;
-        list[idx].qty = Math.max(1, next);
-        setCart(list);
-        render();
-      }
+      const act = t.getAttribute("data-act");
+      if (act === "remove") list.splice(idx, 1);
+      if (act === "inc")   list[idx].qty = (Number(list[idx].qty)||1) + 1;
+      if (act === "dec")   list[idx].qty = Math.max(1, (Number(list[idx].qty)||1) - 1);
+
+      setCart(list);
+      render();
     });
 
     itemsEl.addEventListener("change", (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement)) return;
-      const id = t.getAttribute("data-id");
-      if (!id) return;
+      const id = t.getAttribute("data-id"); if (!id) return;
       const list = getCart();
-      const idx = list.findIndex((x) => String(x.id) === String(id));
-      if (idx < 0) return;
-      const q = Math.max(1, Number(t.value) || 1);
-      list[idx].qty = q;
+      const idx = list.findIndex(x => String(x.id) === String(id)); if (idx < 0) return;
+      list[idx].qty = Math.max(1, Number(t.value) || 1);
       setCart(list);
       render();
     });
 
-    // Eventos globales
-    window.addEventListener("cart:open", () => { render(); open(); });
-    window.addEventListener("cart:toggle", () => {
-      if (drawer.classList.contains("translate-x-full")) { render(); open(); }
-      else close();
-    });
     window.addEventListener("cart:updated", render);
+    window.addEventListener("hashchange", () => {
+      if (location.hash === "#cart-drawer") render();
+    });
 
-    // Render inicial
+    // Primer render
     render();
   })();
 </script>
