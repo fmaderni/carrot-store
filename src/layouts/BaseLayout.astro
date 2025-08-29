@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import AuthButtons from "../components/AuthButtons.astro";
 import CartBadge from "../components/CartBadge.astro";
+import CartDrawer from "../components/CartDrawer.astro";
 
 const {
   title: pageTitle = "Carrot",
@@ -38,5 +39,7 @@ const {
         © {new Date().getFullYear()} Carrot — Montevideo
       </div>
     </footer>
+    
+    <CartDrawer />
   </body>
 </html>
