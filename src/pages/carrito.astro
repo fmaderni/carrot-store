@@ -1,0 +1,83 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Carrito" description="Tu carrito de compras">
+  <section class="mx-auto max-w-6xl px-4 py-10">
+    <h1 class="text-3xl font-bold tracking-tight">Carrito</h1>
+
+    <div id="cart-empty" class="mt-6 text-stone-600 hidden">
+      Tu carrito está vacío. <a class="underline" href="/catalogo">Ver catálogo</a>.
+    </div>
+
+    <div id="cart-list" class="mt-6 grid gap-4"></div>
+
+    <div id="cart-summary" class="mt-8 hidden">
+      <p class="text-lg">
+        Total: <span id="cart-total" class="font-semibold">$ 0</span>
+      </p>
+      <div class="mt-4 flex gap-3">
+        <a href="/checkout" class="rounded-lg bg-orange-600 text-white px-4 py-2">Ir a pagar</a>
+        <button id="clear-cart" class="rounded-lg border px-4 py-2">Vaciar carrito</button>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" client:load>
+    import { getCart, setQty, removeFromCart, clearCart, cartTotal } from "../lib/cart";
+
+    const $list = document.getElementById("cart-list");
+    const $empty = document.getElementById("cart-empty");
+    const $summary = document.getElementById("cart-summary");
+    const $total = document.getElementById("cart-total");
+    const $clear = document.getElementById("clear-cart");
+
+    const money = (n) => new Intl.NumberFormat("es-UY", { style: "currency", currency: "USD" }).format(n || 0);
+
+    function render() {
+      const items = getCart();
+      $list.innerHTML = "";
+      if (!items.length) {
+        $empty.classList.remove("hidden");
+        $summary.classList.add("hidden");
+        return;
+      }
+      $empty.classList.add("hidden");
+      $summary.classList.remove("hidden");
+
+      for (const it of items) {
+        const row = document.createElement("div");
+        row.className = "flex items-center gap-4 border rounded-lg p-3 bg-white";
+
+        row.innerHTML = `
+          ${it.cover_url ? `<img src="${it.cover_url}" alt="${it.name}" class="w-16 h-16 object-cover rounded-md" />` : ""}
+          <div class="flex-1">
+            <a href="/producto/${it.slug}" class="font-medium hover:underline">${it.name}</a>
+            <div class="text-sm text-stone-600">USD ${it.price}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-dec class="rounded border px-2 py-1">-</button>
+            <input data-qty type="number" min="1" value="${it.qty}" class="w-14 rounded border px-2 py-1 text-center" />
+            <button data-inc class="rounded border px-2 py-1">+</button>
+          </div>
+          <div class="w-24 text-right font-semibold">${money(it.price * it.qty)}</div>
+          <button data-remove class="ml-2 text-sm underline">Quitar</button>
+        `;
+
+        // eventos
+        row.querySelector("[data-inc]").addEventListener("click", () => { setQty(it.id, it.qty + 1); render(); });
+        row.querySelector("[data-dec]").addEventListener("click", () => { setQty(it.id, Math.max(1, it.qty - 1)); render(); });
+        row.querySelector("[data-qty]").addEventListener("input", (e) => { setQty(it.id, Math.max(1, Number(e.target.value || 1))); render(); });
+        row.querySelector("[data-remove]").addEventListener("click", () => { removeFromCart(it.id); render(); });
+
+        $list.appendChild(row);
+      }
+
+      $total.textContent = money(cartTotal());
+      window.dispatchEvent(new CustomEvent("cart:updated"));
+    }
+
+    $clear?.addEventListener("click", () => { clearCart(); render(); });
+    render();
+  </script>
+</BaseLayout>

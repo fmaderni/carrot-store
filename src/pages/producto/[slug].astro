@@ -44,11 +44,28 @@ const image =
   <section class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl font-bold">{product.name}</h1>
     <p class="mt-2 text-stone-700">{product.description}</p>
-    {product.price ? (
-      <p class="mt-4 text-xl font-semibold">USD {product.price}</p>
+    {product.price ? <p class="mt-4 text-xl font-semibold">USD {product.price}</p> : null}
+
+    {product.cover_url ? (
+      <img class="mt-6 rounded-lg" src={product.cover_url} alt={product.name} />
     ) : null}
-    {image ? (
-      <img class="mt-6 rounded-lg" src={image} alt={product.name} />
-    ) : null}
+
+    <button id="add-to-cart" class="mt-6 rounded-lg bg-orange-600 text-white px-4 py-2">
+      Agregar al carrito
+    </button>
   </section>
+
+  <script type="module" client:load>
+    import { addToCart } from "../../lib/cart";
+    const PRODUCT = {
+      id: "{product.id}",
+      slug: "{product.slug}",
+      name: {JSON.stringify(product.name)},
+      price: {Number(product.price || 0)},
+      cover_url: {JSON.stringify(product.cover_url || null)}
+    };
+    document.getElementById("add-to-cart")?.addEventListener("click", () => {
+      addToCart(PRODUCT, 1);
+    });
+  </script>
 </BaseLayout>
