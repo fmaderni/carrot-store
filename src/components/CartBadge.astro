@@ -1,56 +1,18 @@
-export type CartItem = {
-  id: string;
-  slug: string;
-  name: string;
-  price: number;
-  qty: number;
-  cover_url?: string | null;
-};
+<!-- src/components/CartBadge.astro -->
+<a href="/carrito" class="relative inline-flex items-center gap-2">
+  🛒
+  <span id="cart-count" class="text-xs rounded-full border px-2 py-0.5">0</span>
+</a>
 
-const KEY = "carrot_cart";
+<script type="module" client:load>
+  import { cartCount } from "../lib/cart";
 
-export function getCart(): CartItem[] {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
+  const el = document.getElementById("cart-count");
 
-export function saveCart(items: CartItem[]) {
-  localStorage.setItem(KEY, JSON.stringify(items));
-  window.dispatchEvent(new CustomEvent("cart:updated"));
-}
+  const update = () => {
+    if (el) el.textContent = String(cartCount());
+  };
 
-export function addToCart(item: Omit<CartItem, "qty">, qty = 1) {
-  const cart = getCart();
-  const i = cart.findIndex((x) => x.id === item.id);
-  if (i >= 0) cart[i].qty += qty;
-  else cart.push({ ...item, qty });
-  saveCart(cart);
-}
-
-export function removeFromCart(id: string) {
-  saveCart(getCart().filter((x) => x.id !== id));
-}
-
-export function setQty(id: string, qty: number) {
-  const cart = getCart();
-  const i = cart.findIndex((x) => x.id === id);
-  if (i >= 0) {
-    cart[i].qty = Math.max(1, qty);
-    saveCart(cart);
-  }
-}
-
-export function clearCart() {
-  saveCart([]);
-}
-
-export function cartCount() {
-  return getCart().reduce((a, b) => a + b.qty, 0);
-}
-
-export function cartTotal() {
-  return getCart().reduce((a, b) => a + (b.price || 0) * b.qty, 0);
-}
+  update();
+  window.addEventListener("cart:updated", update);
+</script>
