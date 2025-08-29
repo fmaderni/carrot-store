@@ -3,7 +3,7 @@
 ---
 <aside
   id="cart-drawer"
-  class="fixed right-0 top-0 h-dvh w-[380px] max-w-[90vw] bg-white shadow-2xl border-l border-orange-200 translate-x-full transition-transform duration-300 z-50 flex flex-col"
+  class="fixed right-0 top-0 h-dvh w-[380px] max-w-[90vw] bg-white shadow-2xl border-l border-orange-200 transition-transform duration-300 z-50 flex flex-col"
 >
   <div class="flex items-center justify-between px-4 py-3 border-b">
     <h2 class="text-lg font-semibold">Tu carrito</h2>
@@ -32,8 +32,8 @@
 
 <style>
   /* Abrir/cerrar solo con #hash, sin depender de JS */
-  #cart-drawer { transform: translateX(100%); }
-  #cart-drawer:target { transform: translateX(0); }
+  #cart-drawer { transform: translateX(100%) !important; }
+  #cart-drawer:target { transform: translateX(0) !important; }
   #cart-overlay { opacity: 0; pointer-events: none; }
   #cart-drawer:target + #cart-overlay { opacity: 1; pointer-events: auto; }
 </style>
