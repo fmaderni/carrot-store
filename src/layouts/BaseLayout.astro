@@ -44,22 +44,41 @@ const {
     </footer>
 
     <CartDrawer />
-    <script is:raw>
-      function getCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
-      function setCart(c){ localStorage.setItem('cart', JSON.stringify(c)); document.dispatchEvent(new CustomEvent('cart:update')); }
+    <script is:inline>
+  (() => {
+    const drawer   = document.getElementById('cart-drawer');
+    const backdrop = document.getElementById('cart-backdrop');
+    const openBtn  = document.getElementById('cart-badge');  // ahora es <button>
+    const closeBtn = document.getElementById('cart-close');
 
-      document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('[data-add]');
-      if(!btn) return;
-      e.preventDefault(); // clave: no seguir href, no cambiar el hash
-      const item = btn.dataset.add ? JSON.parse(btn.dataset.add) : null;
-      if(!item) return;
-      const cart = getCart();
-      const i = cart.findIndex(x=>x.id===item.id);
-      if(i>=0) cart[i].qty = (cart[i].qty||1) + 1; else cart.push({...item, qty: 1});
-      setCart(cart);
+    if (!drawer || !openBtn) return;
+
+    const open = () => {
+      drawer.setAttribute('data-open', 'true');
+      document.body.classList.add('cart-open');
+      openBtn.setAttribute('aria-expanded', 'true');
+    };
+
+    const close = () => {
+      drawer.removeAttribute('data-open');
+      document.body.classList.remove('cart-open');
+      openBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    openBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      open();
     });
-   </script>
+
+    closeBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      close();
+    });
+
+    backdrop?.addEventListener('click', close);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  })();
+</script>
 
   </body>
 </html>
