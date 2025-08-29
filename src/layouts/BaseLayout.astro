@@ -15,6 +15,9 @@ const {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     <meta name="description" content={pageDescription} />
+    <style is:global>
+      body:has(#cart-drawer:target) { overflow: hidden; }
+    </style>
   </head>
   <body class="min-h-dvh bg-orange-50 text-stone-900">
     <header class="border-b border-orange-200">
@@ -39,7 +42,24 @@ const {
         © {new Date().getFullYear()} Carrot — Montevideo
       </div>
     </footer>
-    
+
     <CartDrawer />
+    <script is:raw>
+      function getCart(){ try { return JSON.parse(localStorage.getItem('cart')||'[]'); } catch { return []; } }
+      function setCart(c){ localStorage.setItem('cart', JSON.stringify(c)); document.dispatchEvent(new CustomEvent('cart:update')); }
+
+      document.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-add]');
+      if(!btn) return;
+      e.preventDefault(); // clave: no seguir href, no cambiar el hash
+      const item = btn.dataset.add ? JSON.parse(btn.dataset.add) : null;
+      if(!item) return;
+      const cart = getCart();
+      const i = cart.findIndex(x=>x.id===item.id);
+      if(i>=0) cart[i].qty = (cart[i].qty||1) + 1; else cart.push({...item, qty: 1});
+      setCart(cart);
+    });
+   </script>
+
   </body>
 </html>

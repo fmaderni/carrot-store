@@ -1,8 +1,16 @@
 <!-- src/components/CartBadge.astro -->
-<a href="#cart-drawer" class="relative inline-flex items-center gap-2" id="cart-badge">
+<button
+  id="cart-badge"
+  type="button"
+  class="relative inline-flex items-center gap-2"
+  aria-controls="cart-drawer"
+  aria-expanded="false"
+  aria-label="Abrir carrito"
+>
   🛒
   <span id="cart-count" class="text-xs rounded-full border px-2 py-0.5">0</span>
-</a>
+</button>
+
 
 <script>
   (function () {
