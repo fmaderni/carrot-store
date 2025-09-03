@@ -1,75 +1,59 @@
 ---
-// src/pages/producto/[slug].astro
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
-const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-const makeClient = () => createClient(SUPA_URL, SUPA_KEY);
+const url  = import.meta.env.PUBLIC_SUPABASE_URL;
+const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-/** Genera /producto/:slug */
+/** Genera rutas /producto/:slug usando slug O id como fallback */
 export async function getStaticPaths() {
-  try {
-    if (!SUPA_URL || !SUPA_KEY) return [];
-    const { data, error } = await makeClient()
-      .from("products")
-      .select("slug")
-      .eq("is_active", true);
-
-    if (error) {
-      console.error("getStaticPaths:", error);
-      return [];
-    }
-    return (data ?? []).map(({ slug }) => ({ params: { slug } }));
-  } catch (e) {
-    console.error("getStaticPaths exception:", e);
-    return [];
-  }
-}
-
-/** Carga datos del producto */
-const { slug } = Astro.params;
-let product = null;
-let pErr = null;
-
-if (slug && SUPA_URL && SUPA_KEY) {
-  const { data, error } = await makeClient()
+  const supabase = createClient(url, anon);
+  const { data, error } = await supabase
     .from("products")
-    .select("id, slug, name, description, category, size, color, cover_url, image_urls, price")
-    .eq("slug", slug)
-    .single();
-  product = data;
-  pErr = error;
-}
-if (pErr) console.error("product load error:", pErr);
+    .select("id, slug")
+    .eq("is_active", true); // si no usás is_active, quitá este filtro
 
-// price puede venir como string (numeric). Lo convertimos seguro:
-const priceNumber = product?.price != null ? Number(product.price) : null;
-const priceLabel =
-  priceNumber != null && !Number.isNaN(priceNumber)
-    ? priceNumber.toLocaleString("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 })
-    : "Sin precio";
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    params: { slug: row.slug || row.id }, // usa id si falta el slug
+  }));
+}
+
+// ---- Carga del producto para la ruta actual
+const supabase = createClient(url, anon);
+const key = Astro.params.slug;
+
+// Buscá por slug o por id (fallback)
+const { data: product, error } = await supabase
+  .from("products")
+  .select("id, slug, name, description, price, size, category, cover_url, image_urls")
+  .or(`slug.eq.${key},id.eq.${key}`)
+  .single();
+
+if (error) throw new Error(error.message);
 ---
 
-<BaseLayout title={product?.name ?? "Producto"} description={product?.description ?? ""}>
+<BaseLayout title={product.name} description={product.description}>
   <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
     <div>
-      {product?.cover_url ? (
-        <img src={product.cover_url} alt={product?.name} class="rounded-xl border aspect-square object-cover w-full" />
-      ) : product?.image_urls?.length ? (
-        <img src={product.image_urls[0]} alt={product?.name} class="rounded-xl border aspect-square object-cover w-full" />
+      {product.cover_url || product.image_urls?.[0] ? (
+        <img class="rounded-lg border object-cover w-full max-h-[520px]"
+             src={product.cover_url ?? product.image_urls[0]}
+             alt={product.name} />
       ) : null}
     </div>
 
-    <div class="space-y-4">
-      <h1 class="text-3xl font-bold">{product?.name ?? "Producto"}</h1>
-      {product?.size && <p class="text-stone-700">Talle: <strong>{product.size}</strong></p>}
-      {product?.color && <p class="text-stone-700">Color: {product.color}</p>}
-      {product?.description && <p class="text-stone-700">{product.description}</p>}
+    <div>
+      <h1 class="text-3xl font-bold">{product.name}</h1>
+      <p class="mt-2 text-stone-700">{product.description}</p>
 
-      <div class="text-2xl font-semibold">{priceLabel}</div>
+      <div class="mt-4 flex items-center gap-3">
+        {product.size ? <span class="rounded border px-2 py-1 text-sm">Talle {product.size}</span> : null}
+        <span class="text-xl font-semibold">UYU {Number(product.price || 0).toLocaleString("es-UY")}</span>
+      </div>
 
-      {product?.id && (
+      <div class="mt-6">
         <button
           type="button"
           class="rounded-lg bg-orange-600 text-white px-5 py-2"
@@ -79,12 +63,11 @@ const priceLabel =
           data-price={String(product.price ?? 0)}
           data-size={product.size ?? ""}
           data-image={product.cover_url ?? (product.image_urls?.[0] ?? "")}
-          data-slug={product.slug}
+          data-slug={product.slug || product.id}
         >
           Agregar al carrito
         </button>
-      )}
-
+      </div>
     </div>
   </section>
 </BaseLayout>
