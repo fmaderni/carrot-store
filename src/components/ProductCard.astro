@@ -1,31 +1,55 @@
 ---
-import { money } from "../lib/format";
+const { product } = Astro.props;
 
-interface Product {
-  id: string;
-  slug: string;
-  nombre: string;
-  precio: number;
-  imagen: string;
-  talle?: string;
-  categoria?: string;
-  stock?: number; // 0 = agotado
-}
-const { product } = Astro.props as { product: Product };
-const agotado = product.stock !== undefined && product.stock <= 0;
+// Imagen: usa cover_url o el primer elemento de image_urls[]
+const imageUrl =
+  product?.cover_url ??
+  (Array.isArray(product?.image_urls) ? product.image_urls[0] : undefined);
+
+// Precio robusto (viene como number o string)
+const rawPrice =
+  typeof product?.price === "number" ? product.price : Number(product?.price);
+
+// Formateo opcional: cambiá a tu moneda si querés
+const price =
+  Number.isFinite(rawPrice)
+    ? new Intl.NumberFormat("es-UY", {
+        style: "currency",
+        currency: "UYU",
+        maximumFractionDigits: 0,
+      }).format(rawPrice)
+    : null;
+
+const size = product?.size ?? product?.talle ?? "";
 ---
-<a href={`/producto/${product.slug}`} class="group block overflow-hidden rounded-xl border bg-white">
-  <div class="relative">
-    <img src={product.imagen} alt={product.nombre} class="aspect-square w-full object-cover transition group-hover:scale-[1.02]" loading="lazy" />
-    {agotado && (
-      <span class="absolute left-2 top-2 rounded-md bg-stone-900/85 px-2 py-1 text-xs font-semibold text-white">Agotado</span>
+
+<a
+  href={`/producto/${product.slug}`}
+  class="group block rounded-xl border bg-white/70 shadow-sm overflow-hidden"
+>
+  <div class="aspect-[4/5] bg-stone-100 overflow-hidden">
+    {imageUrl ? (
+      <img
+        src={imageUrl}
+        alt={product.name}
+        loading="lazy"
+        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+    ) : (
+      <div class="h-full w-full grid place-items-center text-stone-400 text-sm">
+        Sin imagen
+      </div>
     )}
   </div>
-  <div class="p-3">
-    <h3 class="line-clamp-1 font-medium">{product.nombre}</h3>
-    <p class="mt-1 text-sm text-stone-600">
-      {(product.categoria || "").toUpperCase()} {product.talle ? `· Talle ${product.talle}` : ""}
-    </p>
-    <p class="mt-2 font-semibold">{money(product.precio)}</p>
+
+  <div class="flex items-center justify-between border-t px-3 py-3">
+    <div class="min-w-0">
+      <h3 class="text-sm font-medium truncate">{product.name}</h3>
+      {size && <p class="mt-0.5 text-xs text-stone-600">Talle {size}</p>}
+    </div>
+
+    {price ? (
+      <span class="ml-3 shrink-0 font-semibold">{price}</span>
+    ) : null}
   </div>
 </a>

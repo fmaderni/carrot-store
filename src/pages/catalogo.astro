@@ -17,7 +17,7 @@ const q     = Astro.url.searchParams.get("q") ?? "";
 let query = supabase
   .from("products")
   .select(
-    "id, slug, name, price, category, size, color, cover_url, image_urls, is_active, created_at"
+    "id, slug, name, price, size, cover_url, image_urls"
   )
   .eq("is_active", true)
   .order("created_at", { ascending: false });
