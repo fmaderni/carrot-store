@@ -3,21 +3,16 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-// ENV públicas (deben existir en Cloudflare como PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY)
+// ENV públicas configuradas en Cloudflare
 const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
 const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-// Helper local para crear el cliente
-function makeClient() {
-  return createClient(SUPA_URL, SUPA_KEY);
-}
+// helper local
+const makeClient = () => createClient(SUPA_URL, SUPA_KEY);
 
-/** Genera las rutas estáticas /producto/:slug */
+/** Genera /producto/:slug */
 export async function getStaticPaths() {
-  const { data, error } = await makeClient()
-    .from("products")
-    .select("slug"); // si tenés is_active, podés agregar .eq("is_active", true)
-
+  const { data, error } = await makeClient().from("products").select("slug");
   if (error) {
     console.error("getStaticPaths error:", error);
     return [];
@@ -25,7 +20,7 @@ export async function getStaticPaths() {
   return (data ?? []).map(({ slug }) => ({ params: { slug } }));
 }
 
-/** Carga el producto para el slug actual */
+/** Datos del producto */
 const { slug } = Astro.params;
 const { data: product, error } = await makeClient()
   .from("products")
@@ -39,7 +34,7 @@ const priceUYU = product?.price_uyu ?? null;
 const priceUSD = product?.price ?? null;
 ---
 
-<BaseLayout title={product?.name ?? "Producto"} description={product?.description}>
+<BaseLayout title={product?.name ?? "Producto"} description={product?.description ?? ""}>
   <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
     <div>
       {product?.cover_url ? (
@@ -51,9 +46,9 @@ const priceUSD = product?.price ?? null;
 
     <div class="space-y-4">
       <h1 class="text-3xl font-bold">{product?.name}</h1>
-      {product?.size ? <p class="text-stone-700">Talle: <strong>{product.size}</strong></p> : null}
-      {product?.color ? <p class="text-stone-700">Color: {product.color}</p> : null}
-      <p class="text-stone-700">{product?.description}</p>
+      {product?.size && <p class="text-stone-700">Talle: <strong>{product.size}</strong></p>}
+      {product?.color && <p class="text-stone-700">Color: {product.color}</p>}
+      {product?.description && <p class="text-stone-700">{product.description}</p>}
 
       <div class="text-2xl font-semibold">
         {priceUYU != null ? <>$ {priceUYU} UYU</> : priceUSD != null ? <>USD {priceUSD}</> : "Sin precio"}
