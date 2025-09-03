@@ -1,59 +1,70 @@
 ---
+// src/pages/producto/[slug].astro
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-const url  = import.meta.env.PUBLIC_SUPABASE_URL;
-const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+// ENV (Astro los inserta en build; deben existir en Cloudflare como PUBLIC_*)
+const PUBLIC_SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL;
+const PUBLIC_SUPABASE_ANON_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+// Helper para crear el cliente
+const makeClient = () => createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY);
+
+/** Genera las rutas estáticas /producto/:slug */
 export async function getStaticPaths() {
-  const supabase = createClient(url, anon);
+  const supabase = makeClient();
   const { data, error } = await supabase
     .from("products")
-    .select("slug")
-    .eq("is_active", true);
+    .select("slug");
+    // .eq("is_active", true); // si NO tenés esta columna, dejalo comentado
 
-  if (error) throw new Error(error.message);
+  if (error) {
+    console.error("getStaticPaths error:", error);
+    return [];
+  }
   return (data ?? []).map((row) => ({ params: { slug: row.slug } }));
 }
 
-const supabase = createClient(url, anon);
+/** Carga el producto para el slug actual */
 const { slug } = Astro.params;
+const supabase = makeClient();
 
 const { data: product, error } = await supabase
   .from("products")
-  .select("id, slug, name, description, size, cover_url, image_urls, price_uyu, price")
+  .select("id, slug, name, description, category, size, color, cover_url, image_urls, price, price_uyu")
   .eq("slug", slug)
   .single();
 
 if (error) throw new Error(error.message);
 
-// Precio
-let rawPrice;
-if (typeof product?.price_uyu === "number") {
-  rawPrice = product.price_uyu;
-} else if (product?.price != null) {
-  const n = Number(product.price); // numeric llega como string
-  rawPrice = Number.isFinite(n) ? n : undefined;
-}
-
-const price =
-  rawPrice != null
-    ? new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(rawPrice)
-    : null;
-
-const imageUrl =
-  product?.cover_url ??
-  (Array.isArray(product?.image_urls) ? product.image_urls[0] : undefined);
+const title = product?.name ?? "Producto";
+const priceUYU = product?.price_uyu ?? null;
+const priceUSD = product?.price ?? null;
 ---
 
-<BaseLayout title={product.name} description={product.description}>
-  <section class="mx-auto max-w-6xl px-4 py-10">
-    <h1 class="text-3xl font-bold">{product.name}</h1>
-    <p class="mt-2 text-stone-700">{product.description}</p>
-    {price ? <p class="mt-4 text-xl font-semibold">{price}</p> : null}
-    {product?.size ? <p class="mt-1 text-sm text-stone-600">Talle {product.size}</p> : null}
-    {imageUrl ? (
-      <img class="mt-6 rounded-lg max-w-xl w-full" src={imageUrl} alt={product.name} />
-    ) : null}
+<BaseLayout title={title} description={product?.description}>
+  <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
+    <div>
+      {product?.cover_url ? (
+        <img src={product.cover_url} alt={title} class="rounded-xl border" />
+      ) : product?.image_urls?.length ? (
+        <img src={product.image_urls[0]} alt={title} class="rounded-xl border" />
+      ) : null}
+    </div>
+
+    <div class="space-y-4">
+      <h1 class="text-3xl font-bold">{title}</h1>
+      {product?.size ? <p class="text-stone-700">Talle: <strong>{product.size}</strong></p> : null}
+      {product?.color ? <p class="text-stone-700">Color: {product.color}</p> : null}
+      <p class="text-stone-700">{product?.description}</p>
+
+      <div class="text-2xl font-semibold">
+        {priceUYU != null ? <>$ {priceUYU} UYU</> : priceUSD != null ? <>USD {priceUSD}</> : "Sin precio"}
+      </div>
+
+      <button type="button" class="rounded-lg bg-orange-600 text-white px-5 py-2">
+        Agregar al carrito
+      </button>
+    </div>
   </section>
 </BaseLayout>
