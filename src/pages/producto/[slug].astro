@@ -3,20 +3,14 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-// ENV públicas (deben estar configuradas)
 const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
 const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
-// define acá el helper que te faltaba
 const makeClient = () => createClient(SUPA_URL, SUPA_KEY);
 
 /** Genera /producto/:slug */
 export async function getStaticPaths() {
   try {
-    if (!SUPA_URL || !SUPA_KEY) {
-      console.error("Faltan PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY");
-      return [];
-    }
+    if (!SUPA_URL || !SUPA_KEY) return [];
     const { data, error } = await makeClient()
       .from("products")
       .select("slug")
@@ -41,19 +35,20 @@ let pErr = null;
 if (slug && SUPA_URL && SUPA_KEY) {
   const { data, error } = await makeClient()
     .from("products")
-    .select(
-      "id, slug, name, description, category, size, color, cover_url, image_urls, price, price_uyu"
-    )
+    .select("id, slug, name, description, category, size, color, cover_url, image_urls, price")
     .eq("slug", slug)
     .single();
   product = data;
   pErr = error;
 }
-
 if (pErr) console.error("product load error:", pErr);
 
-const priceUYU = product?.price_uyu ?? null;
-const priceUSD = product?.price ?? null;
+// price puede venir como string (numeric). Lo convertimos seguro:
+const priceNumber = product?.price != null ? Number(product.price) : null;
+const priceLabel =
+  priceNumber != null && !Number.isNaN(priceNumber)
+    ? priceNumber.toLocaleString("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 })
+    : "Sin precio";
 ---
 
 <BaseLayout title={product?.name ?? "Producto"} description={product?.description ?? ""}>
@@ -72,9 +67,7 @@ const priceUSD = product?.price ?? null;
       {product?.color && <p class="text-stone-700">Color: {product.color}</p>}
       {product?.description && <p class="text-stone-700">{product.description}</p>}
 
-      <div class="text-2xl font-semibold">
-        {priceUYU != null ? <>$ {priceUYU} UYU</> : priceUSD != null ? <>USD {priceUSD}</> : "Sin precio"}
-      </div>
+      <div class="text-2xl font-semibold">{priceLabel}</div>
 
       {product?.id && (
         <button type="button" class="rounded-lg bg-orange-600 text-white px-5 py-2" data-cart-add data-product-id={product.id}>
