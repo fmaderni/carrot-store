@@ -2,45 +2,54 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-const url  = import.meta.env.PUBLIC_SUPABASE_URL;
-const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
-
-/** Genera rutas /producto/:slug usando slug O id como fallback */
+/* Genera rutas estáticas usando slug o id como fallback */
 export async function getStaticPaths() {
-  const supabase = createClient(url, anon);
+  const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
+  const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseAnon);
+
   const { data, error } = await supabase
     .from("products")
     .select("id, slug")
-    .eq("is_active", true); // si no usás is_active, quitá este filtro
+    .eq("is_active", true); // quitá este filtro si no usás is_active
 
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((row) => ({
-    params: { slug: row.slug || row.id }, // usa id si falta el slug
+    params: { slug: row.slug || String(row.id) },
   }));
 }
 
-// ---- Carga del producto para la ruta actual
-const supabase = createClient(url, anon);
-const key = Astro.params.slug;
+/* Carga del producto para la ruta actual (slug o id) */
+const supabaseUrl  = import.meta.env.PUBLIC_SUPABASE_URL;
+const supabaseAnon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnon);
 
-// Buscá por slug o por id (fallback)
-const { data: product, error } = await supabase
+const key = Astro.params.slug || "";
+
+// Si parece UUID -> buscar por id, si no -> por slug
+const looksLikeUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key);
+
+let query = supabase
   .from("products")
-  .select("id, slug, name, description, price, size, category, cover_url, image_urls")
-  .or(`slug.eq.${key},id.eq.${key}`)
-  .single();
+  .select("id, slug, name, description, price, size, category, cover_url, image_urls");
 
-if (error) throw new Error(error.message);
+query = looksLikeUUID ? query.eq("id", key) : query.eq("slug", key);
+
+const { data: product, error } = await query.single();
+if (error || !product) throw new Error(error?.message || "Producto no encontrado");
 ---
 
 <BaseLayout title={product.name} description={product.description}>
   <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
     <div>
       {product.cover_url || product.image_urls?.[0] ? (
-        <img class="rounded-lg border object-cover w-full max-h-[520px]"
-             src={product.cover_url ?? product.image_urls[0]}
-             alt={product.name} />
+        <img
+          class="rounded-lg border object-cover w-full max-h-[520px]"
+          src={product.cover_url ?? product.image_urls[0]}
+          alt={product.name}
+          loading="eager"
+        />
       ) : null}
     </div>
 
@@ -50,7 +59,9 @@ if (error) throw new Error(error.message);
 
       <div class="mt-4 flex items-center gap-3">
         {product.size ? <span class="rounded border px-2 py-1 text-sm">Talle {product.size}</span> : null}
-        <span class="text-xl font-semibold">UYU {Number(product.price || 0).toLocaleString("es-UY")}</span>
+        <span class="text-xl font-semibold">
+          UYU {Number(product.price || 0).toLocaleString("es-UY")}
+        </span>
       </div>
 
       <div class="mt-6">

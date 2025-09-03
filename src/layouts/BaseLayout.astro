@@ -107,6 +107,125 @@ const {
   });
 })();
 </script>
+<script is:inline>
+(() => {
+  const KEY = 'carrot_cart_v1';
+
+  const fmtUYU = (n) => {
+    const num = Number(n || 0);
+    return num.toLocaleString('es-UY', { style: 'currency', currency: 'UYU', maximumFractionDigits: 0 });
+  };
+
+  const read = () => {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); }
+    catch { return []; }
+  };
+  const write = (items) => localStorage.setItem(KEY, JSON.stringify(items));
+
+  const sumQty = (items) => items.reduce((a, b) => a + (b.qty || 1), 0);
+  const sumTotal = (items) => items.reduce((a, b) => a + (Number(b.price || 0) * (b.qty || 1)), 0);
+
+  const render = () => {
+    const items = read();
+
+    const countEl = document.getElementById('cart-count');
+    if (countEl) countEl.textContent = String(sumQty(items));
+
+    const emptyEl = document.getElementById('cart-empty');
+    const listEl  = document.getElementById('cart-items');
+    const totalEl = document.getElementById('cart-total');
+
+    if (!emptyEl || !listEl || !totalEl) return;
+
+    if (!items.length) {
+      emptyEl.classList.remove('hidden');
+      listEl.classList.add('hidden');
+      listEl.innerHTML = '';
+      totalEl.textContent = fmtUYU(0);
+      return;
+    }
+
+    emptyEl.classList.add('hidden');
+    listEl.classList.remove('hidden');
+
+    listEl.innerHTML = items.map((it) => `
+      <li class="flex gap-3 p-3">
+        <a href="/producto/${it.slug}" class="block h-16 w-16 shrink-0 overflow-hidden rounded border">
+          ${it.image ? `<img src="${it.image}" alt="${it.name}" class="h-full w-full object-cover" />` : ''}
+        </a>
+        <div class="min-w-0 flex-1">
+          <a href="/producto/${it.slug}" class="block truncate font-medium">${it.name}</a>
+          ${it.size ? `<p class="text-sm text-stone-600">Talle: ${it.size}</p>` : ''}
+          <p class="text-sm font-semibold">${fmtUYU(it.price)}</p>
+        </div>
+        <div class="flex flex-col items-end">
+          <div class="text-sm text-stone-600">x${it.qty || 1}</div>
+          <button class="mt-auto rounded border px-2 py-1 text-sm hover:bg-stone-50"
+                  data-cart-remove data-id="${it.id}">
+            Quitar
+          </button>
+        </div>
+      </li>
+    `).join('');
+
+    totalEl.textContent = fmtUYU(sumTotal(items));
+  };
+
+  const addItem = (payload) => {
+    const items = read();
+    const idx = items.findIndex((x) => String(x.id) === String(payload.id));
+    if (idx >= 0) {
+      items[idx].qty = (items[idx].qty || 1) + 1;
+    } else {
+      items.push({ ...payload, qty: 1 });
+    }
+    write(items);
+    render();
+  };
+
+  const removeItem = (id) => {
+    let items = read();
+    const idx = items.findIndex((x) => String(x.id) === String(id));
+    if (idx >= 0) {
+      if ((items[idx].qty || 1) > 1) {
+        items[idx].qty -= 1;
+      } else {
+        items.splice(idx, 1);
+      }
+      write(items);
+      render();
+    }
+  };
+
+  // Delegación
+  document.addEventListener('click', (e) => {
+    const addBtn = e.target.closest('[data-cart-add]');
+    if (addBtn) {
+      e.preventDefault();
+      const d = addBtn.dataset;
+      addItem({
+        id: d.id,
+        name: d.name || 'Producto',
+        price: Number(d.price || 0),
+        size: d.size || '',
+        image: d.image || '',
+        slug: d.slug || ''
+      });
+      return;
+    }
+
+    const rmBtn = e.target.closest('[data-cart-remove]');
+    if (rmBtn) {
+      e.preventDefault();
+      removeItem(rmBtn.dataset.id);
+      return;
+    }
+  });
+
+  // Primera pintura
+  document.addEventListener('DOMContentLoaded', render);
+})();
+</script>
 
   </body>
 </html>

@@ -1,23 +1,36 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-
 ---
-<BaseLayout title="Cómo comprar">
-  
-  <section class="mx-auto max-w-3xl px-4 py-10 prose">
-    <h1>Cómo comprar</h1>
-    <ol>
-      <li>Elegí tu prenda desde el <a href="/catalogo">catálogo</a>.</li>
-      <li>Revisá medidas y fotos en fondo blanco (sin sorpresas).</li>
-      <li>Pagá con MercadoPago o en efectivo si retirás por el local.</li>
-      <li>Entrega: pick-up en Montevideo o envíos por zona/DAC.</li>
-      <li>No hay cambios: cada prenda es única y está medida.</li>
-    </ol>
-    <h2>Envíos</h2>
-    <ul>
-      <li>Zonas de Montevideo: coordinamos por WhatsApp.</li>
-      <li>Interior: DAC (costo a cargo del comprador).</li>
-    </ul>
-  </section>
+<BaseLayout title="Cómo comprar | Carrot" description="Pasos para comprar: pagos, envíos y retiro en local.">
+  <section class="mx-auto max-w-3xl px-4 py-10 space-y-8">
+    <h1 class="text-3xl font-bold">Cómo comprar</h1>
 
+    <div class="space-y-3">
+      <h2 class="text-xl font-semibold">1) Elegí tu prenda</h2>
+      <p>Entrá al <a href="/catalogo" class="underline">catálogo</a> y seleccioná la prenda. Revisá talle, medidas, fotos y estado.</p>
+    </div>
+
+    <div class="space-y-3">
+      <h2 class="text-xl font-semibold">2) Pagos</h2>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Mercado Pago</strong> (débito/crédito/QR).</li>
+        <li><strong>Efectivo</strong> al retirar por el local (reservamos 24 h).</li>
+      </ul>
+    </div>
+
+    <div class="space-y-3">
+      <h2 class="text-xl font-semibold">3) Envíos & Retiro</h2>
+      <ul class="list-disc pl-5 space-y-1">
+        <li><strong>Pickup</strong> en nuestro local (coordinar por WhatsApp).</li>
+        <li><strong>Envíos</strong> por zona/DAC (tarifa según destino).</li>
+      </ul>
+    </div>
+
+    <div class="space-y-3">
+      <h2 class="text-xl font-semibold">4) Cambios</h2>
+      <p>No realizamos cambios. Todas las prendas se publican con medidas y fotos detalladas.</p>
+    </div>
+
+    <p class="text-sm text-stone-500">¿Dudas? <a href="/contacto" class="underline">Contactanos</a> por WhatsApp o Instagram.</p>
+  </section>
 </BaseLayout>

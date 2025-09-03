@@ -1,59 +1,42 @@
 ---
+// src/components/ProductCard.astro
 const { product } = Astro.props;
 
-// Imagen: cover_url o primer image_urls[]
-const imageUrl =
-  product?.cover_url ??
-  (Array.isArray(product?.image_urls) ? product.image_urls[0] : undefined);
-
-// Precio: primero price_uyu (int4), si no hay, usa price (numeric -> string)
-let rawPrice: number | undefined;
-if (typeof product?.price_uyu === "number") {
-  rawPrice = product.price_uyu;
-} else if (product?.price != null) {
-  const n = Number(product.price); // numeric llega como string desde Supabase
-  rawPrice = Number.isFinite(n) ? n : undefined;
-}
-
-const price =
-  rawPrice != null
-    ? new Intl.NumberFormat("es-UY", {
-        style: "currency",
-        currency: "UYU",
-        maximumFractionDigits: 0,
-      }).format(rawPrice)
-    : null;
-
-const size = product?.size ?? product?.talle ?? "";
+// price puede ser string (numeric). Normalizamos:
+const priceNumber = product?.price != null ? Number(product.price) : null;
+const priceLabel =
+  priceNumber != null && !Number.isNaN(priceNumber)
+    ? priceNumber.toLocaleString("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 })
+    : "Sin precio";
 ---
 
-<a
-  href={`/producto/${product.slug}`}
-  class="group block rounded-xl border bg-white/70 shadow-sm overflow-hidden"
->
-  <div class="aspect-[4/5] bg-stone-100 overflow-hidden">
-    {imageUrl ? (
-      <img
-        src={imageUrl}
-        alt={product.name}
-        loading="lazy"
-        class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
+<article class="rounded-xl border bg-white overflow-hidden flex flex-col">
+  <a href={`/producto/${product.slug || product.id}`} class="block">
+    {product.cover_url ? (
+      <img src={product.cover_url} alt={product.name} class="aspect-square w-full object-cover" />
+    ) : product.image_urls?.length ? (
+      <img src={product.image_urls[0]} alt={product.name} class="aspect-square w-full object-cover" />
     ) : (
-      <div class="h-full w-full grid place-items-center text-stone-400 text-sm">
-        Sin imagen
-      </div>
+      <div class="aspect-square grid place-items-center bg-stone-100 text-stone-500">Sin imagen</div>
     )}
-  </div>
+  </a>
 
-  <div class="flex items-center justify-between border-t px-3 py-3">
-    <div class="min-w-0">
-      <h3 class="text-sm font-medium truncate">{product.name}</h3>
-      {size && <p class="mt-0.5 text-xs text-stone-600">Talle {size}</p>}
-    </div>
+  <div class="p-3 flex-1 flex flex-col gap-1">
+    <a class="font-semibold line-clamp-1" href={`/producto/${product.slug}`}>{product.name}</a>
+    {product.size && <p class="text-sm text-stone-600">Talle: {product.size}</p>}
+    <p class="mt-auto font-semibold">{priceLabel}</p>
+    <button
+      class="mt-2 rounded-lg bg-orange-600 text-white px-3 py-2"
+      data-cart-add
+      data-id={product.id}
+      data-name={product.name}
+      data-price={String(product.price ?? 0)}
+      data-size={product.size ?? ""}
+      data-image={product.cover_url ?? (product.image_urls?.[0] ?? "")}
+      data-slug={product.slug}
+      >
+      Agregar
+    </button>
 
-    {price ? (
-      <span class="ml-3 shrink-0 font-semibold">{price}</span>
-    ) : null}
   </div>
-</a>
+</article>
