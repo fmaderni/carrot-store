@@ -1,18 +1,22 @@
 ---
 const { product } = Astro.props;
 
-// Imagen: usa cover_url o el primer elemento de image_urls[]
+// Imagen: cover_url o primer image_urls[]
 const imageUrl =
   product?.cover_url ??
   (Array.isArray(product?.image_urls) ? product.image_urls[0] : undefined);
 
-// Precio robusto (viene como number o string)
-const rawPrice =
-  typeof product?.price === "number" ? product.price : Number(product?.price);
+// Precio: primero price_uyu (int4), si no hay, usa price (numeric -> string)
+let rawPrice: number | undefined;
+if (typeof product?.price_uyu === "number") {
+  rawPrice = product.price_uyu;
+} else if (product?.price != null) {
+  const n = Number(product.price); // numeric llega como string desde Supabase
+  rawPrice = Number.isFinite(n) ? n : undefined;
+}
 
-// Formateo opcional: cambiá a tu moneda si querés
 const price =
-  Number.isFinite(rawPrice)
+  rawPrice != null
     ? new Intl.NumberFormat("es-UY", {
         style: "currency",
         currency: "UYU",

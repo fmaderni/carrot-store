@@ -2,13 +2,11 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-/** Genera las rutas estáticas /producto/:slug */
-export async function getStaticPaths() {
-  const supabase = createClient(
-    import.meta.env.PUBLIC_SUPABASE_URL,
-    import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-  );
+const url  = import.meta.env.PUBLIC_SUPABASE_URL;
+const anon = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
+export async function getStaticPaths() {
+  const supabase = createClient(url, anon);
   const { data, error } = await supabase
     .from("products")
     .select("slug")
@@ -18,54 +16,44 @@ export async function getStaticPaths() {
   return (data ?? []).map((row) => ({ params: { slug: row.slug } }));
 }
 
-/** Carga el producto para el slug actual */
-const supabase = createClient(
-  import.meta.env.PUBLIC_SUPABASE_URL,
-  import.meta.env.PUBLIC_SUPABASE_ANON_KEY
-);
-
+const supabase = createClient(url, anon);
 const { slug } = Astro.params;
 
 const { data: product, error } = await supabase
   .from("products")
-  .select(
-    "id, slug, name, description, price, category, size, color, cover_url, image_urls"
-  )
+  .select("id, slug, name, description, size, cover_url, image_urls, price_uyu, price")
   .eq("slug", slug)
   .single();
 
 if (error) throw new Error(error.message);
 
-const image =
-  product.cover_url ?? (product.image_urls && product.image_urls[0]) ?? null;
+// Precio
+let rawPrice;
+if (typeof product?.price_uyu === "number") {
+  rawPrice = product.price_uyu;
+} else if (product?.price != null) {
+  const n = Number(product.price); // numeric llega como string
+  rawPrice = Number.isFinite(n) ? n : undefined;
+}
+
+const price =
+  rawPrice != null
+    ? new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(rawPrice)
+    : null;
+
+const imageUrl =
+  product?.cover_url ??
+  (Array.isArray(product?.image_urls) ? product.image_urls[0] : undefined);
 ---
 
 <BaseLayout title={product.name} description={product.description}>
   <section class="mx-auto max-w-6xl px-4 py-10">
     <h1 class="text-3xl font-bold">{product.name}</h1>
     <p class="mt-2 text-stone-700">{product.description}</p>
-    {product.price ? <p class="mt-4 text-xl font-semibold">USD {product.price}</p> : null}
-
-    {product.cover_url ? (
-      <img class="mt-6 rounded-lg" src={product.cover_url} alt={product.name} />
+    {price ? <p class="mt-4 text-xl font-semibold">{price}</p> : null}
+    {product?.size ? <p class="mt-1 text-sm text-stone-600">Talle {product.size}</p> : null}
+    {imageUrl ? (
+      <img class="mt-6 rounded-lg max-w-xl w-full" src={imageUrl} alt={product.name} />
     ) : null}
-
-    <button id="add-to-cart" class="mt-6 rounded-lg bg-orange-600 text-white px-4 py-2">
-      Agregar al carrito
-    </button>
   </section>
-
-  <script type="module" client:load>
-    import { addToCart } from "../../lib/cart";
-    const PRODUCT = {
-      id: "{product.id}",
-      slug: "{product.slug}",
-      name: {JSON.stringify(product.name)},
-      price: {Number(product.price || 0)},
-      cover_url: {JSON.stringify(product.cover_url || null)}
-    };
-    document.getElementById("add-to-cart")?.addEventListener("click", () => {
-      addToCart(PRODUCT, 1);
-    });
-  </script>
 </BaseLayout>
