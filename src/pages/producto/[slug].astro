@@ -3,32 +3,54 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { createClient } from "@supabase/supabase-js";
 
-// ENV públicas configuradas en Cloudflare
+// ENV públicas (deben estar configuradas)
 const SUPA_URL = import.meta.env.PUBLIC_SUPABASE_URL;
 const SUPA_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY;
 
-// helper local
+// define acá el helper que te faltaba
 const makeClient = () => createClient(SUPA_URL, SUPA_KEY);
 
 /** Genera /producto/:slug */
 export async function getStaticPaths() {
-  const { data, error } = await makeClient().from("products").select("slug");
-  if (error) {
-    console.error("getStaticPaths error:", error);
+  try {
+    if (!SUPA_URL || !SUPA_KEY) {
+      console.error("Faltan PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY");
+      return [];
+    }
+    const { data, error } = await makeClient()
+      .from("products")
+      .select("slug")
+      .eq("is_active", true);
+
+    if (error) {
+      console.error("getStaticPaths:", error);
+      return [];
+    }
+    return (data ?? []).map(({ slug }) => ({ params: { slug } }));
+  } catch (e) {
+    console.error("getStaticPaths exception:", e);
     return [];
   }
-  return (data ?? []).map(({ slug }) => ({ params: { slug } }));
 }
 
-/** Datos del producto */
+/** Carga datos del producto */
 const { slug } = Astro.params;
-const { data: product, error } = await makeClient()
-  .from("products")
-  .select("id, slug, name, description, category, size, color, cover_url, image_urls, price, price_uyu")
-  .eq("slug", slug)
-  .single();
+let product = null;
+let pErr = null;
 
-if (error) throw new Error(error.message);
+if (slug && SUPA_URL && SUPA_KEY) {
+  const { data, error } = await makeClient()
+    .from("products")
+    .select(
+      "id, slug, name, description, category, size, color, cover_url, image_urls, price, price_uyu"
+    )
+    .eq("slug", slug)
+    .single();
+  product = data;
+  pErr = error;
+}
+
+if (pErr) console.error("product load error:", pErr);
 
 const priceUYU = product?.price_uyu ?? null;
 const priceUSD = product?.price ?? null;
@@ -38,14 +60,14 @@ const priceUSD = product?.price ?? null;
   <section class="mx-auto max-w-6xl px-4 py-10 grid gap-8 md:grid-cols-2">
     <div>
       {product?.cover_url ? (
-        <img src={product.cover_url} alt={product?.name} class="rounded-xl border" />
+        <img src={product.cover_url} alt={product?.name} class="rounded-xl border aspect-square object-cover w-full" />
       ) : product?.image_urls?.length ? (
-        <img src={product.image_urls[0]} alt={product?.name} class="rounded-xl border" />
+        <img src={product.image_urls[0]} alt={product?.name} class="rounded-xl border aspect-square object-cover w-full" />
       ) : null}
     </div>
 
     <div class="space-y-4">
-      <h1 class="text-3xl font-bold">{product?.name}</h1>
+      <h1 class="text-3xl font-bold">{product?.name ?? "Producto"}</h1>
       {product?.size && <p class="text-stone-700">Talle: <strong>{product.size}</strong></p>}
       {product?.color && <p class="text-stone-700">Color: {product.color}</p>}
       {product?.description && <p class="text-stone-700">{product.description}</p>}
@@ -54,9 +76,11 @@ const priceUSD = product?.price ?? null;
         {priceUYU != null ? <>$ {priceUYU} UYU</> : priceUSD != null ? <>USD {priceUSD}</> : "Sin precio"}
       </div>
 
-      <button type="button" class="rounded-lg bg-orange-600 text-white px-5 py-2" data-cart-add data-product-id={product?.id}>
-        Agregar al carrito
-      </button>
+      {product?.id && (
+        <button type="button" class="rounded-lg bg-orange-600 text-white px-5 py-2" data-cart-add data-product-id={product.id}>
+          Agregar al carrito
+        </button>
+      )}
     </div>
   </section>
 </BaseLayout>
