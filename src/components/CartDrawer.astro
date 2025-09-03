@@ -1,125 +1,64 @@
 ---
-// src/components/CartDrawer.astro
+/* Componente solo visual + JS de apertura/cierre */
 ---
-<aside
-  id="cart-drawer"
-  class="fixed right-0 top-0 h-dvh w-[380px] max-w-[90vw] bg-white shadow-2xl border-l border-orange-200 transition-transform duration-300 z-50 flex flex-col"
->
-  <div class="flex items-center justify-between px-4 py-3 border-b">
+<!-- Overlay -->
+<div id="cart-overlay"
+     class="fixed inset-0 bg-black/50 opacity-0 pointer-events-none transition-opacity z-40"></div>
+
+<!-- Drawer -->
+<aside id="cart-drawer"
+       class="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-xl translate-x-full transition-transform duration-300 z-50">
+  <header class="flex items-center justify-between p-4 border-b">
     <h2 class="text-lg font-semibold">Tu carrito</h2>
-    <a href="#" aria-label="Cerrar" class="text-2xl leading-none">×</a>
-  </div>
+    <button id="close-cart" type="button" class="text-2xl leading-none">×</button>
+  </header>
 
-  <div id="cart-items" class="p-4 flex flex-col gap-3 overflow-y-auto" style="max-height: calc(100dvh - 200px)"></div>
-
-  <div class="mt-auto border-t p-4">
-    <div class="flex items-center justify-between mb-3">
-      <span class="text-sm text-stone-600">Subtotal</span>
-      <strong id="cart-subtotal">USD 0</strong>
-    </div>
-    <div class="flex gap-2">
-      <a href="/carrito" class="flex-1 rounded-lg border px-4 py-2 text-center">Ir al carrito</a>
-      <button id="checkout" class="flex-1 rounded-lg bg-orange-600 text-white px-4 py-2">Finalizar</button>
-    </div>
+  <div class="p-4 space-y-3">
+    <!-- Contenido mínimo de ejemplo. Podés reemplazar por tu lista real -->
+    <p class="text-sm text-stone-600">Acá van los productos del carrito.</p>
+    <a href="/carrito" class="inline-flex items-center justify-center rounded-lg border px-4 py-2">
+      Ver carrito
+    </a>
   </div>
 </aside>
 
-<a
-  href="#"
-  id="cart-overlay"
-  class="fixed inset-0 bg-black/30 opacity-0 pointer-events-none transition-opacity duration-300 z-40"
-></a>
-
-<style>
-  /* Abrir/cerrar solo con #hash, sin depender de JS */
-  #cart-drawer { transform: translateX(100%) !important; }
-  #cart-drawer:target { transform: translateX(0) !important; }
-  #cart-overlay { opacity: 0; pointer-events: none; }
-  #cart-drawer:target + #cart-overlay { opacity: 1; pointer-events: auto; }
-</style>
-
 <script>
   (function () {
-    const itemsEl = document.getElementById("cart-items");
-    const subtotalEl = document.getElementById("cart-subtotal");
+    const drawer  = document.getElementById('cart-drawer');
+    const overlay = document.getElementById('cart-overlay');
+    const openBtn = document.getElementById('cart-badge');
+    const closeBtn = document.getElementById('close-cart');
 
-    function getCart() {
-      try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; }
+    function openDrawer() {
+      drawer.classList.remove('translate-x-full');
+      overlay.classList.remove('opacity-0', 'pointer-events-none');
+      document.body.style.overflow = 'hidden';
     }
-    function setCart(next) {
-      localStorage.setItem("cart", JSON.stringify(next));
-      window.dispatchEvent(new CustomEvent("cart:updated"));
+    function closeDrawer() {
+      drawer.classList.add('translate-x-full');
+      overlay.classList.add('opacity-0', 'pointer-events-none');
+      document.body.style.overflow = '';
     }
-    function subtotal(list) {
-      return list.reduce((acc, it) => acc + (Number(it.price) || 0) * (Number(it.qty) || 1), 0);
+    function safe(fn){ return (e)=>{ e && e.preventDefault && e.preventDefault(); fn(); } }
+
+    openBtn && openBtn.addEventListener('click', safe(openDrawer));
+    closeBtn && closeBtn.addEventListener('click', safe(closeDrawer));
+    overlay.addEventListener('click', closeDrawer);
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });
+
+    // --- contador del badge ---
+    function updateCount() {
+      const el = document.getElementById('cart-count');
+      if (!el) return;
+      try {
+        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+        const total = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+        el.textContent = String(total);
+      } catch (_) { /* noop */ }
     }
-    function fmt(n) {
-      try { return new Intl.NumberFormat("es-UY",{style:"currency",currency:"USD"}).format(n); }
-      catch { return `USD ${n.toFixed(2)}`; }
-    }
-
-    function render() {
-      const list = getCart();
-      itemsEl.innerHTML = "";
-      if (list.length === 0) {
-        itemsEl.innerHTML = '<p class="text-sm text-stone-600">Tu carrito está vacío.</p>';
-      } else {
-        for (const it of list) {
-          const row = document.createElement("div");
-          row.className = "grid grid-cols-[64px_1fr_auto] gap-3 items-center";
-          row.innerHTML = `
-            <img src="${it.cover_url || (it.image_urls?.[0] || "")}" alt="${it.name || ""}" class="h-16 w-16 object-cover rounded">
-            <div>
-              <a href="/producto/${it.slug || it.id}" class="font-medium line-clamp-1">${it.name || "Producto"}</a>
-              <div class="text-xs text-stone-600 mt-0.5">USD ${Number(it.price || 0)}</div>
-              <div class="mt-1 flex items-center gap-2">
-                <button data-act="dec" data-id="${it.id}" class="h-6 w-6 border rounded">-</button>
-                <input data-id="${it.id}" class="w-10 h-6 text-center border rounded" value="${it.qty || 1}">
-                <button data-act="inc" data-id="${it.id}" class="h-6 w-6 border rounded">+</button>
-              </div>
-            </div>
-            <button data-act="remove" data-id="${it.id}" class="text-sm text-red-600 hover:underline">Quitar</button>
-          `;
-          itemsEl.appendChild(row);
-        }
-      }
-      subtotalEl.textContent = fmt(subtotal(list));
-    }
-
-    // Interacciones
-    itemsEl.addEventListener("click", (e) => {
-      const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-      const id = t.getAttribute("data-id"); if (!id) return;
-      const list = getCart();
-      const idx = list.findIndex(x => String(x.id) === String(id)); if (idx < 0) return;
-
-      const act = t.getAttribute("data-act");
-      if (act === "remove") list.splice(idx, 1);
-      if (act === "inc")   list[idx].qty = (Number(list[idx].qty)||1) + 1;
-      if (act === "dec")   list[idx].qty = Math.max(1, (Number(list[idx].qty)||1) - 1);
-
-      setCart(list);
-      render();
-    });
-
-    itemsEl.addEventListener("change", (e) => {
-      const t = e.target;
-      if (!(t instanceof HTMLInputElement)) return;
-      const id = t.getAttribute("data-id"); if (!id) return;
-      const list = getCart();
-      const idx = list.findIndex(x => String(x.id) === String(id)); if (idx < 0) return;
-      list[idx].qty = Math.max(1, Number(t.value) || 1);
-      setCart(list);
-      render();
-    });
-
-    window.addEventListener("cart:updated", render);
-    window.addEventListener("hashchange", () => {
-      if (location.hash === "#cart-drawer") render();
-    });
-
-    // Primer render
-    render();
+    updateCount();
+    // Si tu lógica de "agregar al carrito" hace localStorage.setItem, podés llamar esto:
+    document.addEventListener('cart:updated', updateCount);
+    window.addEventListener('storage', updateCount); // entre pestañas
   })();
 </script>

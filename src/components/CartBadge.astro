@@ -1,30 +1,4 @@
-<!-- src/components/CartBadge.astro -->
-<button
-  id="cart-badge"
-  type="button"
-  class="relative inline-flex items-center gap-2"
-  aria-controls="cart-drawer"
-  aria-expanded="false"
-  aria-label="Abrir carrito"
->
+<button id="cart-badge" type="button" class="relative inline-flex items-center gap-2">
   🛒
   <span id="cart-count" class="text-xs rounded-full border px-2 py-0.5">0</span>
 </button>
-
-
-<script>
-  (function () {
-    function getCart() {
-      try { return JSON.parse(localStorage.getItem("cart") || "[]"); } catch { return []; }
-    }
-    function count() {
-      return getCart().reduce((n, it) => n + (Number(it.qty) || 1), 0);
-    }
-    function update() {
-      const el = document.getElementById("cart-count");
-      if (el) el.textContent = String(count());
-    }
-    update();
-    window.addEventListener("cart:updated", update);
-  })();
-</script>
